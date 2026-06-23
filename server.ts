@@ -268,7 +268,71 @@ export async function createApp() {
 
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on guess:", err));
-    res.json({ success: true, state: getCleanState(state) });
+  });
+
+  // Login a participant (validates existing PIN)
+  app.post("/api/login-participant", async (req, res) => {
+    await getLatestState();
+    const { participantName, pin } = req.body;
+    const trimmedName = (participantName || '').trim();
+    const trimmedPin = (pin || '').trim();
+
+    if (!trimmedName || !trimmedPin) {
+      return res.status(400).json({ error: "Nome e PIN são obrigatórios!" });
+    }
+
+    const participant = state.participants.find(p => p.name.toLowerCase() === trimmedName.toLowerCase());
+    if (!participant) {
+      return res.status(404).json({ error: "Usuário não encontrado no sistema!" });
+    }
+
+    if (participant.pin && participant.pin !== trimmedPin) {
+      return res.status(401).json({ error: "PIN de acesso incorreto!" });
+    }
+
+    res.json({ success: true });
+  });
+
+  // Register a participant (saves their PIN initially)
+  app.post("/api/register-participant", async (req, res) => {
+    await getLatestState();
+    const { participantName, pin } = req.body;
+    const trimmedName = (participantName || '').trim();
+    const trimmedPin = (pin || '').trim();
+
+    if (!trimmedName || !trimmedPin) {
+      return res.status(400).json({ error: "Nome e PIN são obrigatórios!" });
+    }
+
+    const participantExists = state.participants.some(p => p.name.toLowerCase() === trimmedName.toLowerCase());
+    if (participantExists) {
+      return res.status(400).json({ error: "Usuário já possui cadastro com este nome!" });
+    }
+
+    const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const newParticipant: Participant = {
+      id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      name: trimmedName,
+      points: 0,
+      exactScores: 0,
+      correctWinners: 0,
+      lastGuessTime: new Date().toISOString(),
+      avatarColor: randomColor,
+      pin: trimmedPin
+    };
+
+    state.participants.push(newParticipant);
+    recalculateLeaderboard();
+    
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error saving registered participant:", err);
+      res.status(500).json({ error: "Erro ao salvar cadastro no banco de dados." });
+    }
   });
 
   // Admin: Update Match Result (which executes scoring)

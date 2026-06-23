@@ -113,8 +113,21 @@ export default function App() {
   // Mobile states
   const [mobileName, setMobileName] = useState('');
   const [mobilePin, setMobilePin] = useState('');
+  const [mobileConfirmPin, setMobileConfirmPin] = useState('');
+  const [mobileStep, setMobileStep] = useState<'select_name' | 'pin_input'>('select_name');
+  const [isMobileLoggedIn, setIsMobileLoggedIn] = useState(false);
   const [mobileGuesses, setMobileGuesses] = useState<Record<string, { home: string; away: string }>>({});
   const [mobileMessage, setMobileMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('mobile_user_name');
+    const savedPin = localStorage.getItem('mobile_user_pin');
+    if (savedName && savedPin) {
+      setMobileName(savedName);
+      setMobilePin(savedPin);
+      setIsMobileLoggedIn(true);
+    }
+  }, []);
   
   // Admin states
   const [adminSelectedMatch, setAdminSelectedMatch] = useState<string | null>(null);
@@ -384,6 +397,68 @@ export default function App() {
     } catch (err) {
       setMobileMessage({ text: 'Erro de rede ao enviar palpite.', type: 'error' });
     }
+  };
+
+  const handleMobileLogin = async () => {
+    if (!mobileName.trim()) {
+      setMobileMessage({ text: 'Por favor, selecione seu nome!', type: 'error' });
+      return;
+    }
+    if (!mobilePin.trim()) {
+      setMobileMessage({ text: 'Por favor, insira o seu PIN de acesso!', type: 'error' });
+      return;
+    }
+
+    const selectedParticipant = appState?.participants.find(p => p.name.toLowerCase() === mobileName.toLowerCase());
+    const isRegistered = !!selectedParticipant && selectedParticipant.hasPin;
+
+    if (!isRegistered) {
+      if (mobilePin.length < 4 || mobilePin.length > 6) {
+        setMobileMessage({ text: 'O PIN deve conter de 4 a 6 dígitos!', type: 'error' });
+        return;
+      }
+      if (mobilePin !== mobileConfirmPin) {
+        setMobileMessage({ text: 'As senhas/PINs digitados não coincidem!', type: 'error' });
+        return;
+      }
+    }
+
+    try {
+      const endpoint = isRegistered ? '/api/login-participant' : '/api/register-participant';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participantName: mobileName.trim(), pin: mobilePin.trim() })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          setAppState(data.state);
+        }
+        localStorage.setItem('mobile_user_name', mobileName.trim());
+        localStorage.setItem('mobile_user_pin', mobilePin.trim());
+        setIsMobileLoggedIn(true);
+        setMobileMessage({ text: isRegistered ? 'Acesso liberado!' : 'Cadastro realizado com sucesso!', type: 'success' });
+        setTimeout(() => setMobileMessage(null), 3000);
+      } else {
+        const errData = await res.json();
+        setMobileMessage({ text: errData.error || 'Erro ao entrar.', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Erro de conexão ao autenticar:', err);
+      setMobileMessage({ text: 'Erro de conexão com o servidor.', type: 'error' });
+    }
+  };
+
+  const handleMobileLogout = () => {
+    localStorage.removeItem('mobile_user_name');
+    localStorage.removeItem('mobile_user_pin');
+    setMobileName('');
+    setMobilePin('');
+    setMobileConfirmPin('');
+    setMobileStep('select_name');
+    setIsMobileLoggedIn(false);
   };
 
   // Admin: Set match score / Resolve Match (Grades guesses automatically)
@@ -1817,214 +1892,308 @@ export default function App() {
           )}
         </AnimatePresence>
 
-        {/* STEP 1: PARTICIPANT NAME */}
-        <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-4.5 mb-5 shadow-xl relative">
-          <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-emerald-500 to-yellow-500 rounded-t-2xl" />
-          
-          <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
-            <Users className="w-4 h-4 text-emerald-400" />
-            1. Identifique-se para o Ranking
-          </h2>
-
-          <div className="space-y-1">
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Seu Nome ou Nome da Equipe</label>
-            <select
-              value={mobileName}
-              onChange={(e) => {
-                setMobileName(e.target.value);
-                setMobilePin('');
-              }}
-              className="w-full bg-slate-950 text-slate-100 p-3 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
-            >
-              <option value="" className="text-slate-500">Selecione seu nome...</option>
-              {PREDEFINED_PARTICIPANTS.map((name) => (
-                <option key={name} value={name} className="bg-slate-950 text-slate-100">
-                  {name}
-                </option>
-              ))}
-            </select>
-            <p className="text-[9.5px] text-slate-500 font-mono pt-1">
-              *Selecione seu nome cadastrado na lista para vincular seus palpites.
-            </p>
-          </div>
-
-          {mobileName && (
-            <div className="space-y-1 mt-3">
-              {(() => {
-                const selectedParticipant = appState?.participants.find(p => p.name.toLowerCase() === mobileName.toLowerCase());
-                const needsPinCreation = !selectedParticipant || !selectedParticipant.hasPin;
-
-                return (
-                  <>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                      {needsPinCreation ? "Crie um PIN de Acesso (Senha)" : "Digite seu PIN de Acesso"}
-                    </label>
-                    <input
-                      type="password"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={6}
-                      value={mobilePin}
-                      onChange={(e) => setMobilePin(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder={needsPinCreation ? "Crie um PIN numérico (Ex: 1234)" : "Digite o PIN cadastrado"}
-                      className="w-full bg-slate-950 text-slate-100 p-3.5 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 font-mono text-center tracking-widest"
-                    />
-                    <p className="text-[9px] text-slate-500 font-mono pt-1">
-                      {needsPinCreation 
-                        ? "*Importante: Crie um PIN para proteger seus palpites e evitar que outros enviem no seu nome."
-                        : "*Digite o mesmo PIN que você definiu no seu primeiro acesso."}
-                    </p>
-                  </>
-                );
-              })()}
+        {isMobileLoggedIn ? (
+          <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-4 mb-5 shadow-xl flex items-center justify-between relative overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-yellow-500" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-950 text-emerald-400 font-black border border-emerald-500/25">
+                {mobileName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-450 uppercase font-mono tracking-wider font-bold">Identificado como</p>
+                <h2 className="text-sm font-black text-slate-100 uppercase tracking-tight">{mobileName}</h2>
+              </div>
             </div>
-          )}
-        </div>
+            <button
+              onClick={handleMobileLogout}
+              className="bg-slate-800 hover:bg-red-950/30 border border-slate-700 hover:border-red-900/40 text-slate-350 hover:text-red-300 font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg transition uppercase cursor-pointer"
+            >
+              Sair / Trocar
+            </button>
+          </div>
+        ) : (
+          <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-5 mb-5 shadow-xl relative">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-yellow-500 rounded-t-2xl" />
+            
+            {mobileStep === 'select_name' ? (
+              <>
+                <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  Passo 1: Selecione seu Nome
+                </h2>
 
-        {/* STEP 2: SELECT MATCH AND GUESS */}
-        <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-4.5 shadow-xl relative">
-          <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-yellow-500 to-green-500 rounded-t-2xl" />
-          
-          <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
-            <Flame className="w-4 h-4 text-yellow-500" />
-            2. Selecione e Dê seu Palpite!
-          </h2>
-
-          {/* Matches Horizontal Scroll Selection Carousel */}
-          <div className="flex gap-2 overflow-x-auto pb-3.5 mb-4 scrollbar-none">
-            {nextMatches.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center w-full py-4 font-mono font-bold">
-                Sem partidas com palpites abertos no momento!
-              </p>
-            ) : (
-              nextMatches.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setSelectedMatchForGuess(m.id)}
-                  type="button"
-                  className={`px-3 py-2.5 rounded-xl border font-bold text-xs shrink-0 flex items-center gap-2 transition ${selectedMatchForGuess === m.id ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-700/20' : 'bg-slate-950/60 text-slate-400 border-slate-900 hover:bg-slate-900'}`}
-                >
-                  <div className="flex items-center gap-1 shrink-0">
-                    {renderFlag(m.homeFlag, m.homeTeam)}
-                    <span className="text-[10px] text-slate-500 font-normal mx-0.5">vs</span>
-                    {renderFlag(m.awayFlag, m.awayTeam)}
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Seu Nome na Lista</label>
+                    <select
+                      value={mobileName}
+                      onChange={(e) => {
+                        setMobileName(e.target.value);
+                      }}
+                      className="w-full bg-slate-950 text-slate-100 p-3 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="" className="text-slate-500">Selecione seu nome...</option>
+                      {PREDEFINED_PARTICIPANTS.map((name) => (
+                        <option key={name} value={name} className="bg-slate-950 text-slate-100">
+                          {name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <span className="text-[9px] font-mono bg-slate-900/60 px-1.5 py-0.5 rounded text-slate-300">
-                    {m.homeTeam}
-                  </span>
-                </button>
-              ))
+
+                  <button
+                    disabled={!mobileName}
+                    onClick={() => {
+                      if (mobileName) {
+                        setMobilePin('');
+                        setMobileConfirmPin('');
+                        setMobileStep('pin_input');
+                      }
+                    }}
+                    className={`w-full font-extrabold text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg cursor-pointer ${
+                      mobileName 
+                        ? 'bg-emerald-600 hover:bg-emerald-500 text-white' 
+                        : 'bg-slate-800 text-slate-550 border border-slate-850 cursor-not-allowed'
+                    }`}
+                  >
+                    Avançar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {(() => {
+                  const selectedParticipant = appState?.participants.find(p => p.name.toLowerCase() === mobileName.toLowerCase());
+                  const needsPinCreation = !selectedParticipant || !selectedParticipant.hasPin;
+
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                        <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase flex items-center gap-1.5">
+                          <Users className="w-4 h-4 text-emerald-400" />
+                          {needsPinCreation ? 'Passo 2: Cadastrar Senha' : 'Passo 2: Digitar PIN'}
+                        </h2>
+                        <span className="text-[10px] font-bold text-emerald-400 font-mono">
+                          {mobileName}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                            {needsPinCreation ? "Crie seu PIN de Acesso" : "Digite seu PIN de Acesso"}
+                          </label>
+                          <input
+                            type="password"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={6}
+                            value={mobilePin}
+                            onChange={(e) => setMobilePin(e.target.value.replace(/[^0-9]/g, ''))}
+                            placeholder={needsPinCreation ? "Escolha de 4 a 6 dígitos" : "Digite seu PIN de acesso"}
+                            className="w-full bg-slate-950 text-slate-100 p-3.5 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 font-mono text-center tracking-widest"
+                          />
+                        </div>
+
+                        {needsPinCreation && (
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                              Confirme seu PIN de Acesso
+                            </label>
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={6}
+                              value={mobileConfirmPin}
+                              onChange={(e) => setMobileConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
+                              placeholder="Digite novamente o mesmo PIN"
+                              className="w-full bg-slate-950 text-slate-100 p-3.5 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 font-mono text-center tracking-widest"
+                            />
+                          </div>
+                        )}
+
+                        <p className="text-[9px] text-slate-500 font-mono leading-relaxed">
+                          {needsPinCreation 
+                            ? "*Importante: Escolha uma senha numérica simples (PIN) de 4 a 6 dígitos para proteger seus palpites."
+                            : "*Aviso: Se você esqueceu seu PIN, digite a senha cadastrada anteriormente ou contate o administrador."}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2 pt-2">
+                        <button
+                          onClick={handleMobileLogin}
+                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                        >
+                          {needsPinCreation ? "Cadastrar e Entrar!" : "Entrar no Sistema!"}
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobilePin('');
+                            setMobileConfirmPin('');
+                            setMobileStep('select_name');
+                          }}
+                          className="w-full bg-slate-950 hover:bg-slate-900 border border-slate-850 text-slate-400 font-bold text-xs py-2.5 rounded-xl transition uppercase cursor-pointer text-center"
+                        >
+                          Voltar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
             )}
           </div>
+        )}
 
-          {/* Active selected prediction form details */}
-          {selectedMatchForGuess && (
-            (() => {
-              const activeMatch = appState?.matches.find(m => m.id === selectedMatchForGuess);
-              if (!activeMatch) return null;
-              
-              const currentGHome = mobileGuesses[selectedMatchForGuess]?.home ?? '';
-              const currentGAway = mobileGuesses[selectedMatchForGuess]?.away ?? '';
+        {/* STEP 2: SELECT MATCH AND GUESS (ONLY SHOW ONCE LOGGED IN) */}
+        {isMobileLoggedIn && (
+          <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-4.5 shadow-xl relative">
+            <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-yellow-500 to-green-500 rounded-t-2xl" />
+            
+            <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
+              <Flame className="w-4 h-4 text-yellow-500" />
+              2. Selecione e Dê seu Palpite!
+            </h2>
 
-              return (
-                <motion.div 
-                  key={selectedMatchForGuess}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-4"
-                >
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 flex flex-col items-center">
-                    
-                    {/* Match header details */}
-                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3 text-center">
-                      {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
-                    </div>
-
-                    {/* Numeric Input scoreboard score selection row */}
-                    <div className="flex items-center justify-between w-full gap-2">
-                      {/* Home team title */}
-                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
-                        <div className="w-10 h-7 flex items-center justify-center shrink-0">
-                          {renderFlag(activeMatch.homeFlag, activeMatch.homeTeam)}
-                        </div>
-                        <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.homeTeam}</span>
-                      </div>
-
-                      {/* Numeric inputs row */}
-                      <div className="flex items-center w-4/12 gap-1 px-1 justify-center">
-                        <input
-                          type="number"
-                          pattern="[0-9]*"
-                          inputMode="numeric"
-                          value={currentGHome}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '');
-                            setMobileGuesses(prev => ({
-                              ...prev,
-                              [selectedMatchForGuess]: {
-                                ...prev[selectedMatchForGuess],
-                                home: val,
-                                away: currentGAway
-                              }
-                            }));
-                          }}
-                          placeholder="0"
-                          className="w-12 h-12 bg-slate-900 rounded-xl border border-slate-800 text-center font-display font-black text-xl text-emerald-400 focus:outline-none focus:border-emerald-500"
-                        />
-                        <span className="text-slate-600 font-bold">x</span>
-                        <input
-                          type="number"
-                          pattern="[0-9]*"
-                          inputMode="numeric"
-                          value={currentGAway}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, '');
-                            setMobileGuesses(prev => ({
-                              ...prev,
-                              [selectedMatchForGuess]: {
-                                ...prev[selectedMatchForGuess],
-                                home: currentGHome,
-                                away: val
-                              }
-                            }));
-                          }}
-                          placeholder="0"
-                          className="w-12 h-12 bg-slate-900 rounded-xl border border-slate-800 text-center font-display font-black text-xl text-emerald-400 focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
-
-                      {/* Away team title */}
-                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
-                        <div className="w-10 h-7 flex items-center justify-center shrink-0">
-                          {renderFlag(activeMatch.awayFlag, activeMatch.awayTeam)}
-                        </div>
-                        <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.awayTeam}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submission triggers */}
+            {/* Matches Horizontal Scroll Selection Carousel */}
+            <div className="flex gap-2 overflow-x-auto pb-3.5 mb-4 scrollbar-none">
+              {nextMatches.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center w-full py-4 font-mono font-bold">
+                  Sem partidas com palpites abertos no momento!
+                </p>
+              ) : (
+                nextMatches.map(m => (
                   <button
-                    onClick={() => {
-                      const hInt = parseInt(currentGHome);
-                      const aInt = parseInt(currentGAway);
-                      if (isNaN(hInt) || isNaN(aInt)) {
-                        setMobileMessage({ text: 'Insira placares válidos para os dois times!', type: 'error' });
-                        return;
-                      }
-                      submitGuess(selectedMatchForGuess, mobileName, hInt, aInt);
-                    }}
+                    key={m.id}
+                    onClick={() => setSelectedMatchForGuess(m.id)}
                     type="button"
-                    className="w-full bg-linear-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-extrabold text-sm uppercase py-3.5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 cursor-pointer"
+                    className={`px-3 py-2.5 rounded-xl border font-bold text-xs shrink-0 flex items-center gap-2 transition ${selectedMatchForGuess === m.id ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-700/20' : 'bg-slate-950/60 text-slate-400 border-slate-900 hover:bg-slate-900'}`}
                   >
-                    <Send className="w-4.5 h-4.5 text-white" />
-                    Enviar Meu Palpite Magnífico!
+                    <div className="flex items-center gap-1 shrink-0">
+                      {renderFlag(m.homeFlag, m.homeTeam)}
+                      <span className="text-[10px] text-slate-500 font-normal mx-0.5">vs</span>
+                      {renderFlag(m.awayFlag, m.awayTeam)}
+                    </div>
+                    <span className="text-[9px] font-mono bg-slate-900/60 px-1.5 py-0.5 rounded text-slate-300">
+                      {m.homeTeam}
+                    </span>
                   </button>
-                </motion.div>
-              );
-            })()
-          )}
-        </div>
+                ))
+              )}
+            </div>
+
+            {/* Active selected prediction form details */}
+            {selectedMatchForGuess && (
+              (() => {
+                const activeMatch = appState?.matches.find(m => m.id === selectedMatchForGuess);
+                if (!activeMatch) return null;
+                
+                const currentGHome = mobileGuesses[selectedMatchForGuess]?.home ?? '';
+                const currentGAway = mobileGuesses[selectedMatchForGuess]?.away ?? '';
+
+                return (
+                  <motion.div 
+                    key={selectedMatchForGuess}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4"
+                  >
+                    <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 flex flex-col items-center">
+                      
+                      {/* Match header details */}
+                      <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3 text-center">
+                        {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
+                      </div>
+
+                      {/* Numeric Input scoreboard score selection row */}
+                      <div className="flex items-center justify-between w-full gap-2">
+                        {/* Home team title */}
+                        <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
+                          <div className="w-10 h-7 flex items-center justify-center shrink-0">
+                            {renderFlag(activeMatch.homeFlag, activeMatch.homeTeam)}
+                          </div>
+                          <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.homeTeam}</span>
+                        </div>
+
+                        {/* Numeric inputs row */}
+                        <div className="flex items-center w-4/12 gap-1 px-1 justify-center">
+                          <input
+                            type="number"
+                            pattern="[0-9]*"
+                            inputMode="numeric"
+                            value={currentGHome}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              setMobileGuesses(prev => ({
+                                ...prev,
+                                [selectedMatchForGuess]: {
+                                  ...prev[selectedMatchForGuess],
+                                  home: val,
+                                  away: currentGAway
+                                }
+                              }));
+                            }}
+                            placeholder="0"
+                            className="w-12 h-12 bg-slate-900 rounded-xl border border-slate-800 text-center font-display font-black text-xl text-emerald-400 focus:outline-none focus:border-emerald-500"
+                          />
+                          <span className="text-slate-600 font-bold">x</span>
+                          <input
+                            type="number"
+                            pattern="[0-9]*"
+                            inputMode="numeric"
+                            value={currentGAway}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/[^0-9]/g, '');
+                              setMobileGuesses(prev => ({
+                                ...prev,
+                                [selectedMatchForGuess]: {
+                                  ...prev[selectedMatchForGuess],
+                                  home: currentGHome,
+                                  away: val
+                                }
+                              }));
+                            }}
+                            placeholder="0"
+                            className="w-12 h-12 bg-slate-900 rounded-xl border border-slate-800 text-center font-display font-black text-xl text-emerald-400 focus:outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        {/* Away team title */}
+                        <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
+                          <div className="w-10 h-7 flex items-center justify-center shrink-0">
+                            {renderFlag(activeMatch.awayFlag, activeMatch.awayTeam)}
+                          </div>
+                          <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.awayTeam}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submission triggers */}
+                    <button
+                      onClick={() => {
+                        const hInt = parseInt(currentGHome);
+                        const aInt = parseInt(currentGAway);
+                        if (isNaN(hInt) || isNaN(aInt)) {
+                          setMobileMessage({ text: 'Insira placares válidos para os dois times!', type: 'error' });
+                          return;
+                        }
+                        submitGuess(selectedMatchForGuess, mobileName, hInt, aInt);
+                      }}
+                      type="button"
+                      className="w-full bg-linear-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-extrabold text-sm uppercase py-3.5 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/20 cursor-pointer"
+                    >
+                      <Send className="w-4.5 h-4.5 text-white" />
+                      Enviar Meu Palpite Magnífico!
+                    </button>
+                  </motion.div>
+                );
+              })()
+            )}
+          </div>
+        )}
       </div>
 
       {/* FOOTER MOBILE */}
