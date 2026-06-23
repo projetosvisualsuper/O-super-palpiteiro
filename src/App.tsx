@@ -153,50 +153,62 @@ export default function App() {
     if (!appState?.matches) return [];
     const allMatches = [...appState.matches];
 
-    // Helper to get YYYY-MM-DD local format to avoid timezone offsets and regional formatting discrepancies
-    const getLocalDateString = (isoString: string) => {
-      const d = new Date(isoString.replace('Z', ''));
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // Get YYYY-MM-DD in Brasília timezone (BRT = America/Sao_Paulo)
+    // This correctly handles matches that cross midnight UTC (e.g., 23:00 BRT = 02:00Z+1d)
+    const getBRTDateString = (isoString: string): string => {
+      return new Date(isoString).toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).split('/').reverse().join('-'); // DD/MM/YYYY → YYYY-MM-DD
     };
 
-    const getLocalDateStringFromDate = (d: Date) => {
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
-
-    const todayObj = new Date();
-    const todayStr = getLocalDateStringFromDate(todayObj);
+    // Get today's BRT date string
+    const todayStr = new Date().toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).split('/').reverse().join('-');
 
     const yesterdayObj = new Date();
     yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-    const yesterdayStr = getLocalDateStringFromDate(yesterdayObj);
+    const yesterdayStr = yesterdayObj.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).split('/').reverse().join('-');
 
     const tomorrowObj = new Date();
     tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-    const tomorrowStr = getLocalDateStringFromDate(tomorrowObj);
+    const tomorrowStr = tomorrowObj.toLocaleDateString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric', month: '2-digit', day: '2-digit'
+    }).split('/').reverse().join('-');
     
     switch (matchTab) {
       case 'results':
-        // Show ONLY matches of the previous day (yesterday)
+        // Show ONLY matches of the previous day (yesterday) in BRT
         return allMatches
-          .filter(m => getLocalDateString(m.dateTime) === yesterdayStr)
+          .filter(m => getBRTDateString(m.dateTime) === yesterdayStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
       
       case 'upcoming':
-        // Show ONLY matches of the current day (today)
+        // Show ONLY matches of the current day (today) in BRT
         return allMatches
-          .filter(m => getLocalDateString(m.dateTime) === todayStr)
+          .filter(m => getBRTDateString(m.dateTime) === todayStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       case 'brazil':
-        // Show ONLY matches of the following day (tomorrow)
+        // Show ONLY matches of the following day (tomorrow) in BRT
         return allMatches
-          .filter(m => getLocalDateString(m.dateTime) === tomorrowStr)
+          .filter(m => getBRTDateString(m.dateTime) === tomorrowStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       default:
         return allMatches;
     }
   }, [appState?.matches, matchTab]);
+
+
 
   // Handle automatic rotation on TV screen (25 seconds per tab)
   useEffect(() => {
