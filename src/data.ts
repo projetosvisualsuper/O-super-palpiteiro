@@ -264,38 +264,6 @@ export const INITIAL_MATCHES: Match[] = [
   }
 ];
 
-export const INITIAL_PARTICIPANTS: Participant[] = [
-  { id: 'p1', name: 'Casimiro', points: 45, exactScores: 4, correctWinners: 1, lastGuessTime: '2026-06-22T18:30:00Z', avatarColor: '#EAB308' },
-  { id: 'p2', name: 'Luisinho', points: 30, exactScores: 2, correctWinners: 2, lastGuessTime: '2026-06-22T18:35:00Z', avatarColor: '#3B82F6' },
-  { id: 'p3', name: 'Beltrão', points: 22, exactScores: 1, correctWinners: 2, lastGuessTime: '2026-06-22T18:40:00Z', avatarColor: '#EF4444' },
-  { id: 'p4', name: 'Guilherme', points: 15, exactScores: 1, correctWinners: 1, lastGuessTime: '2026-06-22T18:41:00Z', avatarColor: '#10B981' },
-  { id: 'p5', name: 'Defante', points: 10, exactScores: 1, correctWinners: 0, lastGuessTime: '2026-06-22T18:50:00Z', avatarColor: '#8B5CF6' }
-];
+export const INITIAL_PARTICIPANTS: Participant[] = [];
 
-export const INITIAL_GUESSES: Guess[] = [
-  // Turquia vs Paraguai (m_real_1) -> Ended 0-1
-  { id: 'g1', matchId: 'm_real_1', participantName: 'Casimiro', homeScore: 0, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-20T12:00:00Z' },
-  { id: 'g2', matchId: 'm_real_1', participantName: 'Luisinho', homeScore: 1, awayScore: 2, pointsEarned: 5, submittedAt: '2026-06-20T12:05:00Z' },
-  { id: 'g3', matchId: 'm_real_1', participantName: 'Beltrão', homeScore: 0, awayScore: 2, pointsEarned: 5, submittedAt: '2026-06-20T12:10:00Z' },
-  
-  // Holanda vs Suécia (m_real_2) -> Ended 5-1
-  { id: 'g4', matchId: 'm_real_2', participantName: 'Casimiro', homeScore: 3, awayScore: 1, pointsEarned: 5, submittedAt: '2026-06-20T15:00:00Z' },
-  { id: 'g5', matchId: 'm_real_2', participantName: 'Luisinho', homeScore: 5, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-20T15:05:00Z' },
-
-  // Alemanha vs Costa do Marfim (m_real_3) -> Ended 2-1
-  { id: 'g6', matchId: 'm_real_3', participantName: 'Casimiro', homeScore: 2, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-20T18:00:00Z' },
-
-  // Espanha vs Arábia Saudita (m_real_6) -> Ended 4-0
-  { id: 'g7', matchId: 'm_real_6', participantName: 'Casimiro', homeScore: 4, awayScore: 0, pointsEarned: 10, submittedAt: '2026-06-21T15:00:00Z' },
-  { id: 'g8', matchId: 'm_real_6', participantName: 'Defante', homeScore: 4, awayScore: 0, pointsEarned: 10, submittedAt: '2026-06-21T15:10:00Z' },
-
-  // Argentina vs Áustria (m_real_10) -> Ended 2-0
-  { id: 'g9', matchId: 'm_real_10', participantName: 'Casimiro', homeScore: 2, awayScore: 0, pointsEarned: 10, submittedAt: '2026-06-22T12:00:00Z' },
-
-  // Escócia vs Brasil (m_real_20) -> Upcoming
-  { id: 'g10', matchId: 'm_real_20', participantName: 'Casimiro', homeScore: 1, awayScore: 3, pointsEarned: 0, submittedAt: '2026-06-23T09:00:00Z' },
-  { id: 'g11', matchId: 'm_real_20', participantName: 'Luisinho', homeScore: 1, awayScore: 2, pointsEarned: 0, submittedAt: '2026-06-23T09:05:00Z' },
-  { id: 'g12', matchId: 'm_real_20', participantName: 'Beltrão', homeScore: 0, awayScore: 3, pointsEarned: 0, submittedAt: '2026-06-23T09:10:00Z' },
-  { id: 'g13', matchId: 'm_real_20', participantName: 'Guilherme', homeScore: 2, awayScore: 1, pointsEarned: 0, submittedAt: '2026-06-23T09:15:00Z' },
-  { id: 'g14', matchId: 'm_real_20', participantName: 'Defante', homeScore: 1, awayScore: 3, pointsEarned: 0, submittedAt: '2026-06-23T09:20:00Z' }
-];
+export const INITIAL_GUESSES: Guess[] = [];

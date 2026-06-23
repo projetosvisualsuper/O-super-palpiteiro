@@ -20,7 +20,9 @@ import {
   Send,
   Users,
   RefreshCw,
-  Globe
+  Globe,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { Match, Participant, Guess, AppState } from './types';
 
@@ -79,6 +81,27 @@ export default function App() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [adminOpen, setAdminOpen] = useState(false);
   const [selectedMatchForGuess, setSelectedMatchForGuess] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        console.error(`Erro ao ativar tela cheia: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
   
   // Custom admin authentication states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -583,6 +606,15 @@ export default function App() {
                 {appState?.participants.length || 0} PARTICIPANTES
               </span>
             </div>
+
+            <button 
+              onClick={toggleFullscreen}
+              className="bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white px-3.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider cursor-pointer"
+              title="Alternar Tela Cheia"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              {isFullscreen ? "Sair" : "Tela Cheia"}
+            </button>
 
             <button 
               onClick={() => {
