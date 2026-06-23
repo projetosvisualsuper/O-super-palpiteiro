@@ -118,6 +118,10 @@ export default function App() {
   const [isMobileLoggedIn, setIsMobileLoggedIn] = useState(false);
   const [mobileGuesses, setMobileGuesses] = useState<Record<string, { home: string; away: string }>>({});
   const [mobileMessage, setMobileMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [guessConfirmation, setGuessConfirmation] = useState<{
+    matchHome: string; matchAway: string; homeFlag: string; awayFlag: string;
+    homeScore: number; awayScore: number;
+  } | null>(null);
 
   useEffect(() => {
     const savedName = localStorage.getItem('mobile_user_name');
@@ -400,10 +404,23 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setAppState(data.state);
-        setMobileMessage({ text: 'Palpite enviado com sucesso! Veja na TV!', type: 'success' });
-        
-        // Auto clear message after 4s
-        setTimeout(() => setMobileMessage(null), 4000);
+        // Find the match to show in confirmation
+        const confirmedMatch = (data.state?.matches || appState?.matches || []).find((m: Match) => m.id === mId);
+        if (confirmedMatch) {
+          setGuessConfirmation({
+            matchHome: confirmedMatch.homeTeam,
+            matchAway: confirmedMatch.awayTeam,
+            homeFlag: confirmedMatch.homeFlag,
+            awayFlag: confirmedMatch.awayFlag,
+            homeScore: hScore,
+            awayScore: aScore,
+          });
+          // Auto-dismiss after 6s
+          setTimeout(() => setGuessConfirmation(null), 6000);
+        } else {
+          setMobileMessage({ text: 'Palpite enviado com sucesso! Veja na TV!', type: 'success' });
+          setTimeout(() => setMobileMessage(null), 4000);
+        }
       } else {
         const errData = await res.json();
         setMobileMessage({ text: `Erro: ${errData.error || 'Falha ao enviar'}`, type: 'error' });
@@ -2494,6 +2511,136 @@ export default function App() {
                   *Dica: use "admin" ou "1234" para testar
                 </p>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GUESS CONFIRMATION CELEBRATION MODAL */}
+      <AnimatePresence>
+        {guessConfirmation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'radial-gradient(circle at 50% 50%, rgba(5,46,22,0.98) 0%, rgba(2,6,23,0.98) 100%)' }}
+            onClick={() => setGuessConfirmation(null)}
+          >
+            {/* Animated background particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {['🏆','⚽','🎉','🌟','✨','🎊','🥅','🔥'].map((emoji, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ y: '110%', x: `${10 + i * 11}%`, opacity: 0, scale: 0 }}
+                  animate={{ y: '-20%', opacity: [0, 1, 1, 0], scale: [0, 1.5, 1, 0.5] }}
+                  transition={{ duration: 2.5, delay: i * 0.12, ease: 'easeOut' }}
+                  className="absolute text-3xl"
+                >
+                  {emoji}
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ scale: 0.5, y: 60, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: -40, opacity: 0 }}
+              transition={{ type: 'spring', damping: 15, stiffness: 200 }}
+              className="relative w-full max-w-sm text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Big checkmark badge */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 1.3, 1] }}
+                transition={{ delay: 0.1, duration: 0.6, times: [0, 0.6, 1] }}
+                className="w-24 h-24 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-5 shadow-2xl shadow-emerald-500/50"
+              >
+                <Check className="w-12 h-12 text-white stroke-[3]" />
+              </motion.div>
+
+              {/* Title */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-1">
+                  Palpite Confirmado!
+                </h2>
+                <p className="text-emerald-400 text-xs font-bold tracking-widest uppercase mb-6">
+                  🎯 Seu palpite foi registrado com sucesso
+                </p>
+              </motion.div>
+
+              {/* Match card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                className="bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 rounded-2xl p-5 mb-5 shadow-2xl"
+              >
+                {/* Match teams */}
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="flex flex-col items-center gap-1.5">
+                    {renderFlag(guessConfirmation.homeFlag, guessConfirmation.matchHome)}
+                    <span className="text-xs font-bold text-slate-200">{guessConfirmation.matchHome}</span>
+                  </div>
+                  <span className="text-slate-500 text-xs font-bold uppercase tracking-widest">vs</span>
+                  <div className="flex flex-col items-center gap-1.5">
+                    {renderFlag(guessConfirmation.awayFlag, guessConfirmation.matchAway)}
+                    <span className="text-xs font-bold text-slate-200">{guessConfirmation.matchAway}</span>
+                  </div>
+                </div>
+
+                {/* Score badge */}
+                <div className="flex items-center justify-center gap-3">
+                  <div className="bg-emerald-600 text-white font-black text-4xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-700/40">
+                    {guessConfirmation.homeScore}
+                  </div>
+                  <span className="text-slate-400 text-xl font-black">x</span>
+                  <div className="bg-emerald-600 text-white font-black text-4xl w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-700/40">
+                    {guessConfirmation.awayScore}
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500 font-mono mt-2 uppercase tracking-widest">Seu palpite de placar</p>
+              </motion.div>
+
+              {/* User name */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                className="mb-5"
+              >
+                <p className="text-slate-400 text-xs">Registrado como</p>
+                <p className="text-white font-black text-lg uppercase tracking-wide">{mobileName}</p>
+              </motion.div>
+
+              {/* TV message */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.75 }}
+                className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 mb-5 flex items-center gap-2"
+              >
+                <Tv className="w-4 h-4 text-yellow-400 shrink-0" />
+                <p className="text-yellow-300 text-xs font-semibold text-left">
+                  Olhe para a TV! Seu palpite já aparece no ranking ao vivo! 🏆
+                </p>
+              </motion.div>
+
+              {/* Close button */}
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                onClick={() => setGuessConfirmation(null)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm py-3 rounded-xl transition cursor-pointer border border-slate-700"
+              >
+                Fechar e fazer mais palpites
+              </motion.button>
             </motion.div>
           </motion.div>
         )}
