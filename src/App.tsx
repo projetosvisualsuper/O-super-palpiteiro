@@ -112,6 +112,7 @@ export default function App() {
   
   // Mobile states
   const [mobileName, setMobileName] = useState('');
+  const [mobilePin, setMobilePin] = useState('');
   const [mobileGuesses, setMobileGuesses] = useState<Record<string, { home: string; away: string }>>({});
   const [mobileMessage, setMobileMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   
@@ -347,10 +348,13 @@ export default function App() {
     });
   }, []);
 
-  // Post Guess (Mobile or Simulated)
   const submitGuess = async (mId: string, name: string, hScore: number, aScore: number) => {
     if (!name.trim()) {
-      setMobileMessage({ text: 'Por favor, insira o seu nome/equipe!', type: 'error' });
+      setMobileMessage({ text: 'Por favor, selecione seu nome!', type: 'error' });
+      return;
+    }
+    if (!mobilePin.trim()) {
+      setMobileMessage({ text: 'Por favor, insira o seu PIN de acesso!', type: 'error' });
       return;
     }
     try {
@@ -361,7 +365,8 @@ export default function App() {
           matchId: mId,
           participantName: name.trim(),
           homeScore: hScore,
-          awayScore: aScore
+          awayScore: aScore,
+          pin: mobilePin.trim()
         })
       });
 
@@ -1825,7 +1830,10 @@ export default function App() {
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Seu Nome ou Nome da Equipe</label>
             <select
               value={mobileName}
-              onChange={(e) => setMobileName(e.target.value)}
+              onChange={(e) => {
+                setMobileName(e.target.value);
+                setMobilePin('');
+              }}
               className="w-full bg-slate-950 text-slate-100 p-3 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
             >
               <option value="" className="text-slate-500">Selecione seu nome...</option>
@@ -1839,6 +1847,38 @@ export default function App() {
               *Selecione seu nome cadastrado na lista para vincular seus palpites.
             </p>
           </div>
+
+          {mobileName && (
+            <div className="space-y-1 mt-3">
+              {(() => {
+                const selectedParticipant = appState?.participants.find(p => p.name.toLowerCase() === mobileName.toLowerCase());
+                const needsPinCreation = !selectedParticipant || !selectedParticipant.hasPin;
+
+                return (
+                  <>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                      {needsPinCreation ? "Crie um PIN de Acesso (Senha)" : "Digite seu PIN de Acesso"}
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={mobilePin}
+                      onChange={(e) => setMobilePin(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder={needsPinCreation ? "Crie um PIN numérico (Ex: 1234)" : "Digite o PIN cadastrado"}
+                      className="w-full bg-slate-950 text-slate-100 p-3.5 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 font-mono text-center tracking-widest"
+                    />
+                    <p className="text-[9px] text-slate-500 font-mono pt-1">
+                      {needsPinCreation 
+                        ? "*Importante: Crie um PIN para proteger seus palpites e evitar que outros enviem no seu nome."
+                        : "*Digite o mesmo PIN que você definiu no seu primeiro acesso."}
+                    </p>
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </div>
 
         {/* STEP 2: SELECT MATCH AND GUESS */}

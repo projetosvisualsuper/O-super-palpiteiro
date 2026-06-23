@@ -275,6 +275,7 @@ export const PREDEFINED_PARTICIPANTS: string[] = [
   "Eduardo (Boss)",
   "Eduardo (Log)",
   "Estevam",
+  "Indianara",
   "Joelson",
   "João",
   "Lenon",

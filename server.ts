@@ -90,6 +90,17 @@ function recalculateLeaderboard() {
   });
 }
 
+function getCleanState(rawState: AppState): AppState {
+  const cleanParticipants = (rawState.participants || []).map(p => {
+    const { pin, ...rest } = p as any;
+    return { ...rest, hasPin: !!pin };
+  }) as Participant[];
+  return {
+    ...rawState,
+    participants: cleanParticipants
+  };
+}
+
 let lastDbLoadTime = 0;
 const DB_CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
 
@@ -178,13 +189,13 @@ export async function createApp() {
   // API ROOTS
   app.get("/api/status", async (req, res) => {
     const latestState = await getLatestState();
-    res.json(latestState);
+    res.json(getCleanState(latestState));
   });
 
   // Submit a guess
   app.post("/api/palpites", async (req, res) => {
     await getLatestState();
-    const { matchId, participantName, homeScore, awayScore } = req.body;
+    const { matchId, participantName, homeScore, awayScore, pin } = req.body;
 
     if (!matchId || !participantName || homeScore === undefined || awayScore === undefined) {
       return res.status(400).json({ error: "Missing required fields" });
@@ -207,6 +218,10 @@ export async function createApp() {
     // Check if participant already exists, else create
     let participant = state.participants.find(p => p.name.toLowerCase() === trimmedName.toLowerCase());
     if (!participant) {
+      if (!pin || pin.trim().length === 0) {
+        return res.status(400).json({ error: "Crie um PIN de acesso para o seu usuário!" });
+      }
+
       const colors = ['#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#14B8A6'];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
       
@@ -217,10 +232,21 @@ export async function createApp() {
         exactScores: 0,
         correctWinners: 0,
         lastGuessTime: new Date().toISOString(),
-        avatarColor: randomColor
+        avatarColor: randomColor,
+        pin: pin.trim()
       };
       state.participants.push(participant);
     } else {
+      // Participant exists, verify PIN
+      if (participant.pin && participant.pin !== (pin || '').trim()) {
+        return res.status(401).json({ error: "PIN de acesso incorreto!" });
+      }
+      if (!participant.pin) {
+        if (!pin || pin.trim().length === 0) {
+          return res.status(400).json({ error: "Crie um PIN de acesso para o seu usuário!" });
+        }
+        participant.pin = pin.trim();
+      }
       participant.lastGuessTime = new Date().toISOString();
     }
 
@@ -242,7 +268,7 @@ export async function createApp() {
 
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on guess:", err));
-    res.json({ success: true, state });
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Admin: Update Match Result (which executes scoring)
@@ -268,7 +294,7 @@ export async function createApp() {
 
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on match status edit:", err));
-    res.json({ success: true, state });
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Admin: Add or update custom match
@@ -294,7 +320,7 @@ export async function createApp() {
 
     state.matches.push(newMatch);
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on creating match:", err));
-    res.json({ success: true, state });
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Admin: Sync with real World Cup 2026 matches using Gemini API (Google Search Grounding)
@@ -374,7 +400,7 @@ export async function createApp() {
         success: true, 
         count: state.matches.length, 
         isFallback: false, 
-        state 
+        state: getCleanState(state) 
       });
 
     } catch (error) {
@@ -390,7 +416,7 @@ export async function createApp() {
         success: true,
         count: INITIAL_MATCHES.length,
         isFallback: true,
-        state,
+        state: getCleanState(state),
         warning: "Gemini Sync failed; reverted to fallback schedule: " + (error instanceof Error ? error.message : String(error))
       });
     }
@@ -449,7 +475,7 @@ export async function createApp() {
     }
     
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on config edit:", err));
-    res.json({ success: true, state });
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Admin: Reload State from Firestore manually (clears cache)
@@ -457,7 +483,7 @@ export async function createApp() {
     try {
       console.log("[Server] Admin forced reload from Firestore database.");
       const latestState = await getLatestState(true);
-      res.json({ success: true, state: latestState });
+      res.json({ success: true, state: getCleanState(latestState) });
     } catch (error) {
       console.error("[Server] Error during manual database reload:", error);
       res.status(500).json({ error: "Erro ao recarregar do banco de dados" });
@@ -472,7 +498,7 @@ export async function createApp() {
     recalculateLeaderboard();
     try {
       await saveAppState(state);
-      res.json({ success: true, state });
+      res.json({ success: true, state: getCleanState(state) });
     } catch (err) {
       console.error("[Firebase] Error updating state on clear guesses:", err);
       res.status(500).json({ error: "Erro ao salvar alteração no banco de dados" });
@@ -505,7 +531,7 @@ export async function createApp() {
     };
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on reset:", err));
-    res.json({ success: true, state });
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Vite Integration & SPA asset delivery

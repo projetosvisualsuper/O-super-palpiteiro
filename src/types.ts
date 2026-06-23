@@ -18,6 +18,8 @@ export interface Participant {
   correctWinners: number; // correct winner: 5 pts / 7 pts
   lastGuessTime: string;
   avatarColor: string;
+  pin?: string;
+  hasPin?: boolean;
 }
 
 export interface Guess {
