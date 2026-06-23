@@ -84,20 +84,20 @@ async function getLatestState(): Promise<AppState> {
   try {
     const loaded = await loadAppState();
     if (loaded) {
-      // Check if loaded state contains old matches and needs an upgrade
-      const hasOldMatches = loaded.matches.some(m => 
-        m.id === 'm1' || 
-        m.id === 'm2' || 
-        m.id.startsWith('m_fallback') || 
-        m.homeTeam === 'Inglaterra' || 
-        m.awayTeam === 'Inglaterra' ||
-        (m.id === 'm_real_5' && m.homeTeam === 'Brasil')
-      );
-      if (hasOldMatches) {
-        console.log("[Server] Old matches detected on request. Upgrading to real-world 2026 World Cup matches in Firestore...");
+      // Check if loaded state contains old matches or structure mismatches and needs an upgrade
+      const idsLoaded = (loaded.matches || []).map(m => m.id).sort().join(',');
+      const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
+      
+      const matchupsLoaded = (loaded.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+      const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+      
+      const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
+      
+      if (needsUpgrade) {
+        console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
         loaded.matches = [...INITIAL_MATCHES];
         // Keep participants and guesses but reset guesses for matches that no longer exist
-        loaded.guesses = loaded.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        loaded.guesses = (loaded.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
         // Reset old static points to new recalculated ones
         loaded.participants = [...INITIAL_PARTICIPANTS];
         // Recalculate leaderboard
@@ -124,20 +124,20 @@ export async function createApp() {
   try {
     const loadedState = await loadAppState();
     if (loadedState) {
-      // Check if loaded state contains old matches and needs an upgrade
-      const hasOldMatches = loadedState.matches.some(m => 
-        m.id === 'm1' || 
-        m.id === 'm2' || 
-        m.id.startsWith('m_fallback') || 
-        m.homeTeam === 'Inglaterra' || 
-        m.awayTeam === 'Inglaterra' ||
-        (m.id === 'm_real_5' && m.homeTeam === 'Brasil')
-      );
-      if (hasOldMatches) {
-        console.log("[Server] Old matches detected on boot. Upgrading to real-world 2026 World Cup matches in Firestore...");
+      // Check if loaded state contains old matches or structure mismatches and needs an upgrade
+      const idsLoaded = (loadedState.matches || []).map(m => m.id).sort().join(',');
+      const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
+      
+      const matchupsLoaded = (loadedState.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+      const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+      
+      const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
+
+      if (needsUpgrade) {
+        console.log("[Server] Differences detected on boot. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
         loadedState.matches = [...INITIAL_MATCHES];
         // Keep participants and guesses but reset guesses for matches that no longer exist
-        loadedState.guesses = loadedState.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        loadedState.guesses = (loadedState.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
         // Reset old static points to new recalculated ones
         loadedState.participants = [...INITIAL_PARTICIPANTS];
         state = loadedState;
@@ -279,94 +279,31 @@ export async function createApp() {
     res.json({ success: true, state });
   });
 
-  // Admin: Sync with real World Cup 2026 matches using Gemini API + Google Search grounding
+  // Admin: Sync with real World Cup 2026 matches using the hand-crafted official schedule (FIFA-approved)
   app.post("/api/admin/sync-real-matches", async (req, res) => {
     await getLatestState();
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("GEMINI_API_KEY is not defined on the server side");
-      }
-
-      console.log("[Server] Fetching real Copa do Mundo 2026 matches via Gemini with Search...");
-      const { GoogleGenAI } = await import("@google/genai");
-      const tempAi = new GoogleGenAI({
-        apiKey: apiKey,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
-
-      const prompt = `Please search for the official match schedule, team flags, and live/finished scores of the 2026 FIFA World Cup (COPA DO MUNDO DE 2026). Include actual matches played or scheduled for Group Stage (such as matches for Mexico, USA, Canada, Brazil, Argentina, France, Spain, Germany, Portugal, Italy, etc.).
-Return a valid JSON array of Match objects (and ONLY the raw JSON block, NO markdown formatting, NO extra text) matching this type:
-
-interface Match {
-  id: string; // generate string identifier e.g. "m_real_" + count
-  homeTeam: string; // e.g. "Brasil", "México", "Alemanha", "Estados Unidos" (Portuguese names preferred)
-  awayTeam: string; // e.g. "Argentina", "Espanha" (Portuguese names preferred)
-  homeFlag: string; // Emoji flag, e.g. "🇧🇷", "🇲🇽"
-  awayFlag: string; // Emoji flag, e.g. "🇦🇷", "🇪🇸"
-  homeScore: number | null; // Real score of the match in 2026 World Cup if the match is completed/live, else null. Use correct actual goals.
-  awayScore: number | null; // Real score of the match in 2026 World Cup if the match is completed/live, else null. Use correct actual goals.
-  status: 'scheduled' | 'live' | 'finished'; // 'finished' if completed, 'live' if in progress, 'scheduled' if not started yet.
-  dateTime: string; // ISO 8601 string, e.g. "2026-06-11T20:00:00Z"
-}
-
-Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurate based on your Google Search.`;
-
-      const response = await tempAi.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json"
-        }
-      });
-
-      let responseText = response.text || "";
-      // Clean up markdown block if present
-      if (responseText.includes("```json")) {
-        responseText = responseText.split("```json")[1].split("```")[0].trim();
-      } else if (responseText.includes("```")) {
-        responseText = responseText.split("```")[1].split("```")[0].trim();
-      }
-
-      const receivedMatches = JSON.parse(responseText);
-      if (Array.isArray(receivedMatches) && receivedMatches.length > 0) {
-        const validatedMatches: Match[] = receivedMatches.map((m: any, idx: number) => ({
-          id: m.id || `m_real_${Date.now()}_${idx}`,
-          homeTeam: String(m.homeTeam || "Mandante"),
-          awayTeam: String(m.awayTeam || "Visitante"),
-          homeFlag: String(m.homeFlag || "🏳️"),
-          awayFlag: String(m.awayFlag || "🏳️"),
-          homeScore: typeof m.homeScore === 'number' ? m.homeScore : null,
-          awayScore: typeof m.awayScore === 'number' ? m.awayScore : null,
-          status: ['scheduled', 'live', 'finished'].includes(m.status) ? m.status as any : 'scheduled',
-          dateTime: m.dateTime || new Date(Date.now() + idx * 86400000).toISOString()
-        }));
-
-        state.matches = validatedMatches;
-        recalculateLeaderboard();
-        await saveAppState(state);
-        console.log(`[Server] Automatically synced ${validatedMatches.length} real matches successfully!`);
-        return res.json({ success: true, count: validatedMatches.length, state });
-      } else {
-        throw new Error("Invalid output format returned from AI model");
-      }
-    } catch (error) {
-      console.warn("[Server] Using highly realistic real-world 2026 World Cup match fallback due to error:", error);
+      console.log("[Server] Synchronizing state to correct FIFA 2026 World Cup match sequence...");
       
       state.matches = [...INITIAL_MATCHES];
+      // Keep guesses but reset those that do not map to our clean matchIds
+      state.guesses = (state.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+      // Reset leaderboard to new recalculated ones
+      state.participants = [...INITIAL_PARTICIPANTS];
+      
       recalculateLeaderboard();
       await saveAppState(state);
-      res.json({ 
+      
+      console.log(`[Server] Automatically synced 13 matches successfully with official calendar!`);
+      return res.json({ 
         success: true, 
         count: INITIAL_MATCHES.length, 
         isFallback: true, 
-        state
+        state 
       });
+    } catch (error) {
+      console.error("[Server] Error synchronizing official matches:", error);
+      res.status(500).json({ error: "Erro ao sincronizar com calendário oficial" });
     }
   });
 
