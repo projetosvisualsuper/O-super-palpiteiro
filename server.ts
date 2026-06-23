@@ -4,7 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { Match, Participant, Guess, AppState } from "./src/types";
 import { INITIAL_MATCHES, INITIAL_PARTICIPANTS, INITIAL_GUESSES, INITIAL_RULES, PREDEFINED_PARTICIPANTS } from "./src/data";
 import { calculateGuessPoints } from "./src/utils";
-import { loadAppState, saveAppState } from "./src/db/firebase";
+import { loadAppState, saveAppState, isFirebaseReady } from "./src/db/firebase";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 
@@ -679,6 +679,38 @@ export async function createApp() {
       console.error("[Firebase] Error saving fixed match times:", err);
       res.status(500).json({ error: "Erro ao salvar horários corrigidos no banco de dados" });
     }
+  });
+
+  // Diagnostics endpoint
+  app.get("/api/diagnostics", async (req, res) => {
+    const fs = await import("fs");
+    const configPath = path.join(process.cwd(), "firebase-applet-config.json");
+    const hasConfigFile = fs.existsSync(configPath);
+    let configContentKeys: string[] = [];
+    if (hasConfigFile) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+        configContentKeys = Object.keys(parsed);
+      } catch (e) {}
+    }
+    
+    res.json({
+      firebaseReady: isFirebaseReady(),
+      cwd: process.cwd(),
+      hasConfigFile,
+      configContentKeys,
+      envKeys: Object.keys(process.env).filter(k => !k.includes("KEY") && !k.includes("SECRET") && !k.includes("PASSWORD")),
+      firebaseEnv: {
+        hasApiKey: !!process.env.FIREBASE_API_KEY,
+        hasProjectId: !!process.env.FIREBASE_PROJECT_ID,
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        databaseId: process.env.FIREBASE_DATABASE_ID
+      },
+      nodeEnv: process.env.NODE_ENV,
+      port: process.env.PORT,
+      stateParticipantsCount: state.participants.length,
+      stateGuessesCount: state.guesses.length
+    });
   });
 
   // Vite Integration & SPA asset delivery
