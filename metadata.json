@@ -1,0 +1,8 @@
+{
+  "name": "Remix: O Super Palpiteiro",
+  "description": "Sistema de palpites para a Copa do Mundo de 2026 para equipes, com ranking automático, regras estilo Cazé TV, painel animado em looping para TV e envio de palpites via QR code.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
