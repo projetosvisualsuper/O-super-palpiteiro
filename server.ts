@@ -85,12 +85,21 @@ async function getLatestState(): Promise<AppState> {
     const loaded = await loadAppState();
     if (loaded) {
       // Check if loaded state contains old matches and needs an upgrade
-      const hasOldMatches = loaded.matches.some(m => m.id === 'm1' || m.id === 'm2' || m.id.startsWith('m_fallback'));
+      const hasOldMatches = loaded.matches.some(m => 
+        m.id === 'm1' || 
+        m.id === 'm2' || 
+        m.id.startsWith('m_fallback') || 
+        m.homeTeam === 'Inglaterra' || 
+        m.awayTeam === 'Inglaterra' ||
+        (m.id === 'm_real_5' && m.homeTeam === 'Brasil')
+      );
       if (hasOldMatches) {
         console.log("[Server] Old matches detected on request. Upgrading to real-world 2026 World Cup matches in Firestore...");
         loaded.matches = [...INITIAL_MATCHES];
         // Keep participants and guesses but reset guesses for matches that no longer exist
         loaded.guesses = loaded.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        // Reset old static points to new recalculated ones
+        loaded.participants = [...INITIAL_PARTICIPANTS];
         // Recalculate leaderboard
         state = loaded;
         recalculateLeaderboard();
@@ -116,12 +125,21 @@ export async function createApp() {
     const loadedState = await loadAppState();
     if (loadedState) {
       // Check if loaded state contains old matches and needs an upgrade
-      const hasOldMatches = loadedState.matches.some(m => m.id === 'm1' || m.id === 'm2' || m.id.startsWith('m_fallback'));
+      const hasOldMatches = loadedState.matches.some(m => 
+        m.id === 'm1' || 
+        m.id === 'm2' || 
+        m.id.startsWith('m_fallback') || 
+        m.homeTeam === 'Inglaterra' || 
+        m.awayTeam === 'Inglaterra' ||
+        (m.id === 'm_real_5' && m.homeTeam === 'Brasil')
+      );
       if (hasOldMatches) {
         console.log("[Server] Old matches detected on boot. Upgrading to real-world 2026 World Cup matches in Firestore...");
         loadedState.matches = [...INITIAL_MATCHES];
         // Keep participants and guesses but reset guesses for matches that no longer exist
         loadedState.guesses = loadedState.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        // Reset old static points to new recalculated ones
+        loadedState.participants = [...INITIAL_PARTICIPANTS];
         state = loadedState;
         recalculateLeaderboard();
         await saveAppState(state);
