@@ -10,7 +10,7 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-// Test deploy comment to verify guesses persistence
+// Test deploy comment: Verification round 2
 // In-memory state
 let state: AppState = {
   matches: [...INITIAL_MATCHES],
