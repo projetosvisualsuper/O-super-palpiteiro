@@ -21,6 +21,12 @@ let state: AppState = {
   prizeName: "SMART TV 55\" OLED 4K + COLO COLADO",
   prizeDescription: "O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!",
   prizeImage: "",
+  prize2Name: "CAMISA OFICIAL DA SELEÇÃO",
+  prize2Description: "O segundo colocado ganhará uma camisa oficial da Seleção Brasileira autografada!",
+  prize2Image: "",
+  prize3Name: "KIT TORCEDOR EXCLUSIVO",
+  prize3Description: "O terceiro colocado levará um kit torcedor com copo térmico e boné oficial!",
+  prize3Image: "",
   participateTitle: "LEIA O QR CODE COM O CELULAR",
   participateInstruction: "Aponte a câmera pro QR Code, insira seu nome, escolha sua cor e arrisque seus palpites. Salve para pontuar na TV na hora!",
   tvLiveLabel: "TV LIVE",
@@ -401,6 +407,12 @@ export async function createApp() {
       prizeName, 
       prizeImage, 
       prizeDescription,
+      prize2Name,
+      prize2Image,
+      prize2Description,
+      prize3Name,
+      prize3Image,
+      prize3Description,
       participateTitle,
       participateInstruction,
       tvLiveLabel,
@@ -413,6 +425,12 @@ export async function createApp() {
     state.prizeName = prizeName !== undefined ? prizeName : state.prizeName;
     state.prizeImage = prizeImage !== undefined ? prizeImage : state.prizeImage;
     state.prizeDescription = prizeDescription !== undefined ? prizeDescription : state.prizeDescription;
+    state.prize2Name = prize2Name !== undefined ? prize2Name : state.prize2Name;
+    state.prize2Image = prize2Image !== undefined ? prize2Image : state.prize2Image;
+    state.prize2Description = prize2Description !== undefined ? prize2Description : state.prize2Description;
+    state.prize3Name = prize3Name !== undefined ? prize3Name : state.prize3Name;
+    state.prize3Image = prize3Image !== undefined ? prize3Image : state.prize3Image;
+    state.prize3Description = prize3Description !== undefined ? prize3Description : state.prize3Description;
     
     state.participateTitle = participateTitle !== undefined ? participateTitle : state.participateTitle;
     state.participateInstruction = participateInstruction !== undefined ? participateInstruction : state.participateInstruction;
@@ -461,6 +479,12 @@ export async function createApp() {
       prizeName: "SMART TV 55\" OLED 4K + COLO COLADO",
       prizeDescription: "O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!",
       prizeImage: "",
+      prize2Name: "CAMISA OFICIAL DA SELEÇÃO",
+      prize2Description: "O segundo colocado ganhará uma camisa oficial da Seleção Brasileira autografada!",
+      prize2Image: "",
+      prize3Name: "KIT TORCEDOR EXCLUSIVO",
+      prize3Description: "O terceiro colocado levará um kit torcedor com copo térmico e boné oficial!",
+      prize3Image: "",
       participateTitle: "LEIA O QR CODE COM O CELULAR",
       participateInstruction: "Aponte a câmera pro QR Code, insira seu nome, escolha sua cor e arrisque seus palpites. Salve para pontuar na TV na hora!",
       tvLiveLabel: "TV LIVE",

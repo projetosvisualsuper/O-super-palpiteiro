@@ -48,6 +48,12 @@ export interface AppState {
   prizeName?: string;
   prizeImage?: string;
   prizeDescription?: string;
+  prize2Name?: string;
+  prize2Image?: string;
+  prize2Description?: string;
+  prize3Name?: string;
+  prize3Image?: string;
+  prize3Description?: string;
   participateTitle?: string;
   participateInstruction?: string;
   tvLiveLabel?: string;

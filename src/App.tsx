@@ -215,6 +215,12 @@ export default function App() {
   const [configPrizeName, setConfigPrizeName] = useState('');
   const [configPrizeImage, setConfigPrizeImage] = useState('');
   const [configPrizeDescription, setConfigPrizeDescription] = useState('');
+  const [configPrize2Name, setConfigPrize2Name] = useState('');
+  const [configPrize2Image, setConfigPrize2Image] = useState('');
+  const [configPrize2Description, setConfigPrize2Description] = useState('');
+  const [configPrize3Name, setConfigPrize3Name] = useState('');
+  const [configPrize3Image, setConfigPrize3Image] = useState('');
+  const [configPrize3Description, setConfigPrize3Description] = useState('');
   const [configTvLiveLabel, setConfigTvLiveLabel] = useState('');
   const [configChampionshipName, setConfigChampionshipName] = useState('');
   
@@ -227,6 +233,20 @@ export default function App() {
   const [ruleOneTeamScore, setRuleOneTeamScore] = useState(2);
   
   const [hasLoadedConfigs, setHasLoadedConfigs] = useState(false);
+  const [activePrizeTab, setActivePrizeTab] = useState<'1st' | '2nd' | '3rd'>('1st');
+
+  // Auto rotate active prize tab
+  useEffect(() => {
+    if (view !== 'tv') return;
+    const interval = setInterval(() => {
+      setActivePrizeTab((current) => {
+        if (current === '1st') return '2nd';
+        if (current === '2nd') return '3rd';
+        return '1st';
+      });
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [view]);
 
   // Sync inputs with appState details once upon first server response load
   useEffect(() => {
@@ -236,6 +256,12 @@ export default function App() {
       setConfigPrizeName(appState.prizeName || 'SMART TV 55" OLED 4K + COLO COLADO');
       setConfigPrizeImage(appState.prizeImage || '');
       setConfigPrizeDescription(appState.prizeDescription || 'O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!');
+      setConfigPrize2Name(appState.prize2Name || 'CAMISA OFICIAL DA SELEÇÃO');
+      setConfigPrize2Image(appState.prize2Image || '');
+      setConfigPrize2Description(appState.prize2Description || 'O segundo colocado ganhará uma camisa oficial da Seleção Brasileira autografada!');
+      setConfigPrize3Name(appState.prize3Name || 'KIT TORCEDOR EXCLUSIVO');
+      setConfigPrize3Image(appState.prize3Image || '');
+      setConfigPrize3Description(appState.prize3Description || 'O terceiro colocado levará um kit torcedor com copo térmico e boné oficial!');
       setConfigParticipateTitle(appState.participateTitle || 'LEIA O QR CODE COM O CELULAR');
       setConfigParticipateInstruction(appState.participateInstruction || 'Preencha seu nome, selecione seu time e envie seu palpite para pontuar. O ranking atualiza na TV na hora!');
       setConfigTvLiveLabel(appState.tvLiveLabel || 'TV LIVE');
@@ -461,6 +487,12 @@ export default function App() {
           prizeName: configPrizeName,
           prizeImage: configPrizeImage,
           prizeDescription: configPrizeDescription,
+          prize2Name: configPrize2Name,
+          prize2Image: configPrize2Image,
+          prize2Description: configPrize2Description,
+          prize3Name: configPrize3Name,
+          prize3Image: configPrize3Image,
+          prize3Description: configPrize3Description,
           participateTitle: configParticipateTitle,
           participateInstruction: configParticipateInstruction,
           tvLiveLabel: configTvLiveLabel,
@@ -756,48 +788,116 @@ export default function App() {
               </p>
             </div>
 
-            {/* EXPANDABLE/DYNAMIC PRIZE BANNER FOR WINNER (MARKED IN RED ON REQUEST IMAGE) */}
-            <div className="w-full max-w-sm bg-gradient-to-r from-yellow-950/40 via-slate-900/95 to-emerald-950/30 backdrop-blur-md border-2 border-yellow-500/80 rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden shadow-[0_0_25px_rgba(234,179,8,0.25)] group transition duration-300 hover:scale-102">
-              {/* Dynamic decorative neon edge lights */}
-              <div className="absolute top-0 left-0 w-12 h-1 bg-yellow-400 animate-pulse" />
-              <div className="absolute top-0 left-0 w-1 h-12 bg-yellow-400 animate-pulse" />
-              <div className="absolute bottom-0 right-0 w-12 h-1 bg-emerald-400 animate-pulse" />
-              <div className="absolute bottom-0 right-0 w-1 h-12 bg-emerald-400 animate-pulse" />
-              
-              {/* Spinning/pulsing radar ring for visual texture */}
-              <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-yellow-400/10 rounded-full blur-xl animate-pulse" />
-              <div className="absolute -left-6 -top-6 w-20 h-20 bg-emerald-400/5 rounded-full blur-xl animate-pulse" />
-              
-              {/* Prize icon context block */}
-              <div className="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-3 rounded-xl shadow-xl relative shrink-0 flex items-center justify-center border-2 border-yellow-300/40">
-                {appState?.prizeImage ? (
-                  <img 
-                    src={appState.prizeImage} 
-                    alt="Prêmio" 
-                    className="w-9 h-9 object-contain rounded"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <Gift className="w-6.5 h-6.5 text-slate-950 animate-bounce" />
-                )}
-                <div className="absolute -top-1.5 -right-1.5 bg-slate-950 border border-yellow-400 text-yellow-400 rounded-full p-0.5 shadow-md">
-                  <Sparkles className="w-3 h-3 animate-pulse" />
-                </div>
+            {/* EXPANDABLE/DYNAMIC PRIZE BANNER FOR WINNERS (1st, 2nd, 3rd) */}
+            <div className="w-full max-w-sm bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-3 flex flex-col gap-2 relative overflow-hidden shadow-2xl transition duration-300 hover:scale-102">
+              {/* Prize Rank tabs selector */}
+              <div className="grid grid-cols-3 gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-850 z-10">
+                <button
+                  onClick={() => setActivePrizeTab('1st')}
+                  className={`text-[8.5px] font-black uppercase py-0.5 px-1 rounded transition cursor-pointer ${activePrizeTab === '1st' ? 'bg-amber-500 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  🥇 1º Lugar
+                </button>
+                <button
+                  onClick={() => setActivePrizeTab('2nd')}
+                  className={`text-[8.5px] font-black uppercase py-0.5 px-1 rounded transition cursor-pointer ${activePrizeTab === '2nd' ? 'bg-slate-300 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  🥈 2º Lugar
+                </button>
+                <button
+                  onClick={() => setActivePrizeTab('3rd')}
+                  className={`text-[8.5px] font-black uppercase py-0.5 px-1 rounded transition cursor-pointer ${activePrizeTab === '3rd' ? 'bg-amber-700 text-white font-black' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  🥉 3º Lugar
+                </button>
               </div>
 
-              {/* Prize content elements info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-[9px] font-mono font-black tracking-widest text-yellow-400 uppercase bg-yellow-400/20 px-2 py-0.5 rounded border border-yellow-400/35">
-                    🏆 PRÊMIO DO CAMPEÃO 🏆
-                  </span>
+              {/* Dynamic decorative neon edge lights / backgrounds depending on rank */}
+              {activePrizeTab === '1st' ? (
+                <>
+                  <div className="absolute top-0 left-0 w-12 h-0.5 bg-yellow-400 animate-pulse" />
+                  <div className="absolute top-0 left-0 w-0.5 h-12 bg-yellow-400 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-12 h-0.5 bg-emerald-400 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-0.5 h-12 bg-emerald-400 animate-pulse" />
+                  <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-yellow-400/10 rounded-full blur-xl animate-pulse" />
+                </>
+              ) : activePrizeTab === '2nd' ? (
+                <>
+                  <div className="absolute top-0 left-0 w-12 h-0.5 bg-slate-300 animate-pulse" />
+                  <div className="absolute top-0 left-0 w-0.5 h-12 bg-slate-300 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-12 h-0.5 bg-slate-400 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-0.5 h-12 bg-slate-400 animate-pulse" />
+                  <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-slate-300/10 rounded-full blur-xl animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <div className="absolute top-0 left-0 w-12 h-0.5 bg-amber-650 animate-pulse" />
+                  <div className="absolute top-0 left-0 w-0.5 h-12 bg-amber-650 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-12 h-0.5 bg-amber-700 animate-pulse" />
+                  <div className="absolute bottom-0 right-0 w-0.5 h-12 bg-amber-700 animate-pulse" />
+                  <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-amber-600/15 rounded-full blur-xl animate-pulse" />
+                </>
+              )}
+
+              {/* Main Content Area */}
+              <div className="flex items-center gap-3 z-10">
+                {/* Prize Icon/Image block */}
+                <div className={`p-2 rounded-xl shadow-xl relative shrink-0 flex items-center justify-center border ${
+                  activePrizeTab === '1st' ? 'bg-gradient-to-br from-yellow-450 via-amber-500 to-yellow-600 border-yellow-300/40' :
+                  activePrizeTab === '2nd' ? 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-650 border-slate-300/40' :
+                  'bg-gradient-to-br from-amber-600 via-amber-700 to-amber-800 border-amber-500/40'
+                }`}>
+                  {(() => {
+                    const imgUrl = activePrizeTab === '1st' ? appState?.prizeImage : activePrizeTab === '2nd' ? appState?.prize2Image : appState?.prize3Image;
+                    if (imgUrl) {
+                      return (
+                        <img 
+                          src={imgUrl} 
+                          alt="Prêmio" 
+                          className="w-8 h-8 object-contain rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      );
+                    }
+                    return <Gift className={`w-5.5 h-5.5 text-slate-950 ${activePrizeTab === '1st' ? 'animate-bounce' : ''}`} />;
+                  })()}
+                  <div className="absolute -top-1.5 -right-1.5 bg-slate-950 border border-slate-800 rounded-full p-0.5 shadow-md">
+                    <Sparkles className={`w-2.5 h-2.5 ${
+                      activePrizeTab === '1st' ? 'text-yellow-400' :
+                      activePrizeTab === '2nd' ? 'text-slate-350' :
+                      'text-amber-500'
+                    } animate-pulse`} />
+                  </div>
                 </div>
-                <h3 className="font-display font-black text-base text-yellow-400 uppercase tracking-tight mt-1.5 transition duration-150 leading-tight">
-                  {appState?.prizeName || "SMART TV 55\" OLED 4K + COLO COLADO"}
-                </h3>
-                <p className="text-[11px] text-slate-300 font-semibold leading-relaxed mt-1 line-clamp-3">
-                  {appState?.prizeDescription || "O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!"}
-                </p>
+
+                {/* Prize text content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className={`text-[8px] font-mono font-black tracking-widest uppercase px-1.5 py-0.5 rounded border ${
+                      activePrizeTab === '1st' ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/30' :
+                      activePrizeTab === '2nd' ? 'text-slate-300 bg-slate-300/10 border-slate-300/30' :
+                      'text-amber-500 bg-amber-500/10 border-amber-500/30'
+                    }`}>
+                      {activePrizeTab === '1st' ? '🏆 PRÊMIO DO CAMPEÃO 🏆' :
+                       activePrizeTab === '2nd' ? '🥈 PRÊMIO DO 2º LUGAR 🥈' :
+                       '🥉 PRÊMIO DO 3º LUGAR 🥉'}
+                    </span>
+                  </div>
+                  <h3 className={`font-display font-black text-[13px] uppercase tracking-tight mt-1 transition duration-150 leading-tight ${
+                    activePrizeTab === '1st' ? 'text-yellow-400' :
+                    activePrizeTab === '2nd' ? 'text-slate-100' :
+                    'text-amber-500'
+                  }`}>
+                    {activePrizeTab === '1st' ? (appState?.prizeName || "SMART TV 55\" OLED 4K + COLO COLADO") :
+                     activePrizeTab === '2nd' ? (appState?.prize2Name || "CAMISA OFICIAL DA SELEÇÃO") :
+                     (appState?.prize3Name || "KIT TORCEDOR EXCLUSIVO")}
+                  </h3>
+                  <p className="text-[10px] text-slate-300 font-semibold leading-snug mt-0.5 line-clamp-2">
+                    {activePrizeTab === '1st' ? (appState?.prizeDescription || "O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!") :
+                     activePrizeTab === '2nd' ? (appState?.prize2Description || "O segundo colocado ganhará uma camisa oficial da Seleção Brasileira autografada!") :
+                     (appState?.prize3Description || "O terceiro colocado levará um kit torcedor com copo térmico e boné oficial!")}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -1452,6 +1552,74 @@ export default function App() {
                             <p className="text-[9px] text-slate-500 font-mono mt-1">
                               *Se deixado vazio, mostra o ícone animado de caixa de presente.
                             </p>
+                          </div>
+
+                          <div className="border-t border-slate-900/60 my-2 pt-2" />
+
+                          {/* Prize 2 Config */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Nome do Prêmio do 2º Lugar</label>
+                            <input 
+                              type="text" 
+                              value={configPrize2Name}
+                              onChange={(e) => setConfigPrize2Name(e.target.value)}
+                              placeholder="ex: CAMISA OFICIAL"
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm font-bold focus:outline-none focus:border-yellow-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Detalhes do prêmio do 2º Lugar</label>
+                            <textarea 
+                              value={configPrize2Description}
+                              rows={2}
+                              onChange={(e) => setConfigPrize2Description(e.target.value)}
+                              placeholder="ex: O segundo colocado levará..."
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-yellow-500 resize-none font-medium leading-relaxed"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">URL de Imagem do Prêmio 2º Lugar (Opcional)</label>
+                            <input 
+                              type="text" 
+                              value={configPrize2Image}
+                              onChange={(e) => setConfigPrize2Image(e.target.value)}
+                              placeholder="ex: https://site.com/prize2.png"
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-yellow-500"
+                            />
+                          </div>
+
+                          <div className="border-t border-slate-900/60 my-2 pt-2" />
+
+                          {/* Prize 3 Config */}
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Nome do Prêmio do 3º Lugar</label>
+                            <input 
+                              type="text" 
+                              value={configPrize3Name}
+                              onChange={(e) => setConfigPrize3Name(e.target.value)}
+                              placeholder="ex: KIT TORCEDOR"
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm font-bold focus:outline-none focus:border-yellow-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Detalhes do prêmio do 3º Lugar</label>
+                            <textarea 
+                              value={configPrize3Description}
+                              rows={2}
+                              onChange={(e) => setConfigPrize3Description(e.target.value)}
+                              placeholder="ex: O terceiro colocado levará..."
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-yellow-500 resize-none font-medium leading-relaxed"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">URL de Imagem do Prêmio 3º Lugar (Opcional)</label>
+                            <input 
+                              type="text" 
+                              value={configPrize3Image}
+                              onChange={(e) => setConfigPrize3Image(e.target.value)}
+                              placeholder="ex: https://site.com/prize3.png"
+                              className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-yellow-500"
+                            />
                           </div>
                         </div>
                       </div>
