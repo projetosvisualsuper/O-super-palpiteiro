@@ -25,6 +25,7 @@ import {
   Minimize
 } from 'lucide-react';
 import { Match, Participant, Guess, AppState } from './types';
+import { PREDEFINED_PARTICIPANTS } from './data';
 
 function getFlagImgUrl(emoji: string, countryName?: string): string {
   if (!emoji) return '';
@@ -1628,16 +1629,20 @@ export default function App() {
 
           <div className="space-y-1">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wide">Seu Nome ou Nome da Equipe</label>
-            <input
-              type="text"
+            <select
               value={mobileName}
               onChange={(e) => setMobileName(e.target.value)}
-              placeholder="Digite seu nome (Ex: Casimiro, Equipe Alpha...)"
-              maxLength={15}
-              className="w-full bg-slate-950 text-slate-100 p-3 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500"
-            />
+              className="w-full bg-slate-950 text-slate-100 p-3 rounded-xl border border-slate-800 font-bold text-sm focus:outline-none focus:border-emerald-500 cursor-pointer"
+            >
+              <option value="" className="text-slate-500">Selecione seu nome...</option>
+              {PREDEFINED_PARTICIPANTS.map((name) => (
+                <option key={name} value={name} className="bg-slate-950 text-slate-100">
+                  {name}
+                </option>
+              ))}
+            </select>
             <p className="text-[9.5px] text-slate-500 font-mono pt-1">
-              *Máximo 15 caracteres. O nome vincula seus palpites na TV!
+              *Selecione seu nome cadastrado na lista para vincular seus palpites.
             </p>
           </div>
         </div>

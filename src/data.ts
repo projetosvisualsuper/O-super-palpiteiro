@@ -267,3 +267,25 @@ export const INITIAL_MATCHES: Match[] = [
 export const INITIAL_PARTICIPANTS: Participant[] = [];
 
 export const INITIAL_GUESSES: Guess[] = [];
+
+export const PREDEFINED_PARTICIPANTS: string[] = [
+  "Aimee",
+  "Angélica",
+  "Carolina",
+  "Eduardo (Boss)",
+  "Eduardo (Log)",
+  "Estevam",
+  "Joelson",
+  "João",
+  "Lenon",
+  "Olzênis",
+  "Ricardo",
+  "Robinson",
+  "Rodrigo",
+  "Rosinete",
+  "Tais",
+  "Taynara",
+  "Uramar",
+  "Valdir",
+  "Yasmim"
+];
