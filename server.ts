@@ -211,8 +211,10 @@ export async function createApp() {
       return res.status(404).json({ error: "Partida não encontrada" });
     }
 
-    if (match.status === 'finished') {
-      return res.status(400).json({ error: "Esta partida já terminou. Palpites encerrados!" });
+    const matchTime = new Date(match.dateTime).getTime();
+    const nowTime = Date.now();
+    if (nowTime >= matchTime || match.status === 'live' || match.status === 'finished') {
+      return res.status(400).json({ error: "Esta partida já começou ou terminou. Palpites encerrados!" });
     }
 
     // Check if participant already exists, else create

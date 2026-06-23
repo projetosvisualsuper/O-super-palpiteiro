@@ -134,6 +134,8 @@ export default function App() {
   const [adminHomeScore, setAdminHomeScore] = useState('');
   const [adminAwayScore, setAdminAwayScore] = useState('');
   const [adminMatchStatus, setAdminMatchStatus] = useState<'scheduled' | 'live' | 'finished'>('finished');
+  const [adminTab, setAdminTab] = useState<'config' | 'history'>('config');
+  const [adminSearchQuery, setAdminSearchQuery] = useState('');
   
   const [newHomeTeam, setNewHomeTeam] = useState('');
   const [newAwayTeam, setNewAwayTeam] = useState('');
@@ -680,7 +682,10 @@ export default function App() {
     );
   }
 
-  const nextMatches = appState?.matches.filter(m => m.status !== 'finished') || [];
+  const nextMatches = appState?.matches.filter(m => {
+    const isPast = new Date(m.dateTime).getTime() <= Date.now();
+    return m.status === 'scheduled' && !isPast;
+  }) || [];
   const finishedMatches = appState?.matches.filter(m => m.status === 'finished') || [];
   const currentNextMatch = nextMatches[0] || appState?.matches[0];
 
@@ -1281,7 +1286,149 @@ export default function App() {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* TABS SELECTOR */}
+                <div className="flex gap-2 border-b border-slate-800 pb-3 mb-5">
+                  <button
+                    onClick={() => setAdminTab('config')}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition ${
+                      adminTab === 'config'
+                        ? 'bg-emerald-650 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-455 hover:bg-slate-900'
+                    }`}
+                  >
+                    🛠️ Configurações Gerais
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAdminTab('history');
+                      setAdminSearchQuery('');
+                    }}
+                    className={`px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition ${
+                      adminTab === 'history'
+                        ? 'bg-emerald-650 text-white shadow-md'
+                        : 'bg-slate-950 text-slate-455 hover:bg-slate-900'
+                    }`}
+                  >
+                    📊 Relatório de Palpites
+                  </button>
+                </div>
+
+                {adminTab === 'history' ? (
+                  <div className="space-y-4">
+                    {/* Search query input */}
+                    <div className="flex items-center gap-2 bg-slate-950 p-3.5 rounded-2xl border border-slate-850">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Pesquisar por Usuário</label>
+                        <input
+                          type="text"
+                          value={adminSearchQuery}
+                          onChange={(e) => setAdminSearchQuery(e.target.value)}
+                          placeholder="Digite o nome do participante (ex: Joelson)"
+                          className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Guesses list/table */}
+                    <div className="bg-slate-950 rounded-2xl border border-slate-850 p-4 overflow-hidden">
+                      <h4 className="font-display font-black text-xs uppercase tracking-wider text-emerald-450 mb-4 flex items-center gap-1.5">
+                        <Trophy className="w-4 h-4 text-emerald-400" />
+                        Histórico Geral de Palpites
+                      </h4>
+
+                      <div className="overflow-x-auto max-h-[50vh] scrollbar-thin scrollbar-thumb-slate-800">
+                        <table className="w-full text-left border-collapse text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-800 text-slate-450 uppercase text-[10px] tracking-wider font-bold">
+                              <th className="py-2.5 px-3">Usuário</th>
+                              <th className="py-2.5 px-3">Partida</th>
+                              <th className="py-2.5 px-3 text-center">Palpite</th>
+                              <th className="py-2.5 px-3 text-center">Resultado</th>
+                              <th className="py-2.5 px-3 text-center">Pontos</th>
+                              <th className="py-2.5 px-3 text-right">Data/Hora</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(() => {
+                              const allGuesses = appState?.guesses || [];
+                              const filteredGuesses = allGuesses.filter(g => 
+                                !adminSearchQuery.trim() || 
+                                g.participantName.toLowerCase().includes(adminSearchQuery.toLowerCase().trim())
+                              );
+
+                              if (filteredGuesses.length === 0) {
+                                return (
+                                  <tr>
+                                    <td colSpan={6} className="py-10 text-center text-slate-500 font-mono">
+                                      Nenhum palpite encontrado.
+                                    </td>
+                                  </tr>
+                                );
+                              }
+
+                              const sortedGuesses = [...filteredGuesses].sort((a, b) => 
+                                new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+                              );
+
+                              return sortedGuesses.map(g => {
+                                const match = appState?.matches.find(m => m.id === g.matchId);
+                                const isMatchFinished = match?.status === 'finished';
+                                return (
+                                  <tr key={g.id} className="border-b border-slate-900/60 hover:bg-slate-900/40 transition">
+                                    <td className="py-3 px-3 font-bold text-slate-100 flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: appState?.participants.find(p => p.name.toLowerCase() === g.participantName.toLowerCase())?.avatarColor || '#fff' }} />
+                                      {g.participantName}
+                                    </td>
+                                    <td className="py-3 px-3 text-slate-350">
+                                      <div className="flex items-center gap-1.5">
+                                        {match ? (
+                                          <>
+                                            {renderFlag(match.homeFlag, match.homeTeam)}
+                                            <span>{match.homeTeam}</span>
+                                            <span className="text-slate-600 font-normal">vs</span>
+                                            <span>{match.awayTeam}</span>
+                                            {renderFlag(match.awayFlag, match.awayTeam)}
+                                          </>
+                                        ) : (
+                                          <span className="text-red-400">Partida não encontrada ({g.matchId})</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-3 px-3 text-center font-mono font-black text-slate-100">
+                                      {g.homeScore} x {g.awayScore}
+                                    </td>
+                                    <td className="py-3 px-3 text-center font-mono text-slate-400">
+                                      {match && match.homeScore !== null && match.awayScore !== null ? (
+                                        <span className="font-bold text-emerald-450">
+                                          {match.homeScore} x {match.awayScore}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-600">Não iniciado</span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-center">
+                                      {isMatchFinished && g.pointsEarned !== undefined && g.pointsEarned !== null ? (
+                                        <span className="bg-emerald-950/60 border border-emerald-800/45 px-2 py-0.5 rounded text-emerald-400 font-mono font-black text-[10px]">
+                                          +{g.pointsEarned} pts
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-600 font-mono">-</span>
+                                      )}
+                                    </td>
+                                    <td className="py-3 px-3 text-right text-slate-500 font-mono text-[10px]">
+                                      {new Date(g.submittedAt).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                    </td>
+                                  </tr>
+                                );
+                              });
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Left inner Col: Grading / Resolving matches + Instructions */}
                   <div className="space-y-4">
                     <div className="bg-slate-950 p-5 rounded-2xl border border-slate-850 shadow-inner">
@@ -1732,6 +1879,7 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              )}
 
                 {/* Bottom global actions */}
                 <div className="border-t border-slate-805/60 mt-6 pt-5 flex items-center justify-between">
