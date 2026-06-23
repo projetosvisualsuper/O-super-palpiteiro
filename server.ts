@@ -80,7 +80,19 @@ function recalculateLeaderboard() {
   });
 }
 
-async function startServer() {
+async function getLatestState(): Promise<AppState> {
+  try {
+    const loaded = await loadAppState();
+    if (loaded) {
+      state = loaded;
+    }
+  } catch (e) {
+    console.error("[Firebase] Error fetching latest state inside request:", e);
+  }
+  return state;
+}
+
+export async function createApp() {
   const app = express();
   const PORT = 3000;
 
@@ -101,12 +113,14 @@ async function startServer() {
   }
 
   // API ROOTS
-  app.get("/api/status", (req, res) => {
-    res.json(state);
+  app.get("/api/status", async (req, res) => {
+    const latestState = await getLatestState();
+    res.json(latestState);
   });
 
   // Submit a guess
-  app.post("/api/palpites", (req, res) => {
+  app.post("/api/palpites", async (req, res) => {
+    await getLatestState();
     const { matchId, participantName, homeScore, awayScore } = req.body;
 
     if (!matchId || !participantName || homeScore === undefined || awayScore === undefined) {
@@ -171,7 +185,8 @@ async function startServer() {
   });
 
   // Admin: Update Match Result (which executes scoring)
-  app.post("/api/admin/match-result", (req, res) => {
+  app.post("/api/admin/match-result", async (req, res) => {
+    await getLatestState();
     const { matchId, homeScore, awayScore, status } = req.body;
 
     if (!matchId) {
@@ -196,7 +211,8 @@ async function startServer() {
   });
 
   // Admin: Add or update custom match
-  app.post("/api/admin/add-match", (req, res) => {
+  app.post("/api/admin/add-match", async (req, res) => {
+    await getLatestState();
     const { homeTeam, awayTeam, homeFlag, awayFlag, dateTime } = req.body;
 
     if (!homeTeam || !awayTeam) {
@@ -222,6 +238,7 @@ async function startServer() {
 
   // Admin: Sync with real World Cup 2026 matches using Gemini API + Google Search grounding
   app.post("/api/admin/sync-real-matches", async (req, res) => {
+    await getLatestState();
     try {
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -391,7 +408,8 @@ Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurat
   });
 
   // Admin: Update custom logo, prize, general banner instructions, and score rules
-  app.post("/api/admin/config", (req, res) => {
+  app.post("/api/admin/config", async (req, res) => {
+    await getLatestState();
     const { 
       customLogoUrl, 
       customLogoText, 
@@ -434,7 +452,8 @@ Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurat
   });
 
   // Reset demo state
-  app.post("/api/admin/reset", (req, res) => {
+  app.post("/api/admin/reset", async (req, res) => {
+    await getLatestState();
     state = {
       matches: [...INITIAL_MATCHES],
       participants: [...INITIAL_PARTICIPANTS],
@@ -470,11 +489,16 @@ Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurat
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  return app;
 }
 
-startServer().catch(err => {
-  console.error("Failed to start backend server: ", err);
-});
+if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+  createApp().then(app => {
+    const PORT = 3000;
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }).catch(err => {
+    console.error("Failed to start backend server: ", err);
+  });
+}

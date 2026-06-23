@@ -8,28 +8,45 @@ const configPath = path.join(process.cwd(), "firebase-applet-config.json");
 let db: any = null;
 let firebaseInitialized = false;
 
+let config: any = null;
 if (fs.existsSync(configPath)) {
   try {
-    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  } catch (error) {
+    console.error("[Firebase] Error reading firebase-applet-config.json:", error);
+  }
+}
+
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY || config?.apiKey,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || config?.authDomain,
+  projectId: process.env.FIREBASE_PROJECT_ID || config?.projectId,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || config?.storageBucket,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || config?.messagingSenderId,
+  appId: process.env.FIREBASE_APP_ID || config?.appId,
+  firestoreDatabaseId: process.env.FIREBASE_DATABASE_ID || config?.firestoreDatabaseId,
+};
+
+if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+  try {
     const app = initializeApp({
-      apiKey: config.apiKey,
-      authDomain: config.authDomain,
-      projectId: config.projectId,
-      storageBucket: config.storageBucket,
-      messagingSenderId: config.messagingSenderId,
-      appId: config.appId,
+      apiKey: firebaseConfig.apiKey,
+      authDomain: firebaseConfig.authDomain,
+      projectId: firebaseConfig.projectId,
+      storageBucket: firebaseConfig.storageBucket,
+      messagingSenderId: firebaseConfig.messagingSenderId,
+      appId: firebaseConfig.appId,
     });
     
-    // Choose custom databaseId if specified in config, otherwise default
-    const databaseId = config.firestoreDatabaseId || "(default)";
+    const databaseId = firebaseConfig.firestoreDatabaseId || "(default)";
     db = getFirestore(app, databaseId);
     firebaseInitialized = true;
-    console.log(`[Firebase] Initialized with project: ${config.projectId}, db: ${databaseId}`);
+    console.log(`[Firebase] Initialized with project: ${firebaseConfig.projectId}, db: ${databaseId}`);
   } catch (error) {
     console.error("[Firebase] Error during initialization:", error);
   }
 } else {
-  console.warn("[Firebase] Config file not found at " + configPath);
+  console.warn("[Firebase] Config credentials not found in env or file.");
 }
 
 const COLLECTION_NAME = "football_bolao";
