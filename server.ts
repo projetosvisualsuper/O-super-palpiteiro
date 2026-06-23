@@ -103,7 +103,7 @@ function getCleanState(rawState: AppState): AppState {
 }
 
 let lastDbLoadTime = 0;
-const DB_CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+const DB_CACHE_TTL = 5 * 1000; // 5 seconds in ms
 
 async function getLatestState(forceRefresh = false): Promise<AppState> {
   const now = Date.now();
