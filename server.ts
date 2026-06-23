@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { Match, Participant, Guess, AppState } from "./src/types";
-import { INITIAL_MATCHES, INITIAL_PARTICIPANTS, INITIAL_GUESSES, INITIAL_RULES } from "./src/data";
+import { INITIAL_MATCHES, INITIAL_PARTICIPANTS, INITIAL_GUESSES, INITIAL_RULES, PREDEFINED_PARTICIPANTS } from "./src/data";
 import { calculateGuessPoints } from "./src/utils";
 import { loadAppState, saveAppState } from "./src/db/firebase";
 import dotenv from "dotenv";
@@ -111,6 +111,16 @@ async function getLatestState(forceRefresh = false): Promise<AppState> {
       console.log(`[Server] ${forceRefresh ? 'Forced' : 'Cache expired'}. Loading state from Firestore...`);
       const loaded = await loadAppState();
       if (loaded) {
+        // Enforce that only predefined participants and their guesses exist
+        const initialCount = (loaded.participants || []).length;
+        loaded.participants = (loaded.participants || []).filter(p =>
+          PREDEFINED_PARTICIPANTS.some(pp => pp.toLowerCase() === p.name.toLowerCase())
+        );
+        loaded.guesses = (loaded.guesses || []).filter(g =>
+          PREDEFINED_PARTICIPANTS.some(pp => pp.toLowerCase() === g.participantName.toLowerCase())
+        );
+        const cleanedParticipants = (loaded.participants || []).length !== initialCount;
+
         // Check if loaded state contains old matches or structure mismatches and needs an upgrade
         const idsLoaded = (loaded.matches || []).map(m => m.id).sort().join(',');
         const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
@@ -120,21 +130,26 @@ async function getLatestState(forceRefresh = false): Promise<AppState> {
         
         const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
         
-        if (needsUpgrade) {
-          console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-          const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
-            const existing = (loaded.matches || []).find(m => m.id === initialMatch.id);
-            if (existing) {
-              return {
-                ...initialMatch,
-                homeScore: existing.homeScore,
-                awayScore: existing.awayScore,
-                status: existing.status
-              };
-            }
-            return initialMatch;
-          });
-          loaded.matches = updatedMatches;
+        if (needsUpgrade || cleanedParticipants) {
+          if (needsUpgrade) {
+            console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
+            const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
+              const existing = (loaded.matches || []).find(m => m.id === initialMatch.id);
+              if (existing) {
+                return {
+                  ...initialMatch,
+                  homeScore: existing.homeScore,
+                  awayScore: existing.awayScore,
+                  status: existing.status
+                };
+              }
+              return initialMatch;
+            });
+            loaded.matches = updatedMatches;
+          }
+          if (cleanedParticipants) {
+            console.log("[Server] Removed test/unregistered participants and their guesses from state.");
+          }
           // Keep participants
           loaded.participants = loaded.participants || [];
           // Keep guesses but reset guesses for matches that no longer exist
@@ -165,6 +180,16 @@ export async function createApp() {
   try {
     const loadedState = await loadAppState();
     if (loadedState) {
+      // Enforce that only predefined participants and their guesses exist
+      const initialCount = (loadedState.participants || []).length;
+      loadedState.participants = (loadedState.participants || []).filter(p =>
+        PREDEFINED_PARTICIPANTS.some(pp => pp.toLowerCase() === p.name.toLowerCase())
+      );
+      loadedState.guesses = (loadedState.guesses || []).filter(g =>
+        PREDEFINED_PARTICIPANTS.some(pp => pp.toLowerCase() === g.participantName.toLowerCase())
+      );
+      const cleanedParticipants = (loadedState.participants || []).length !== initialCount;
+
       // Check if loaded state contains old matches or structure mismatches and needs an upgrade
       const idsLoaded = (loadedState.matches || []).map(m => m.id).sort().join(',');
       const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
@@ -174,21 +199,26 @@ export async function createApp() {
       
       const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
 
-      if (needsUpgrade) {
-        console.log("[Server] Differences detected on boot. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-        const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
-          const existing = (loadedState.matches || []).find(m => m.id === initialMatch.id);
-          if (existing) {
-            return {
-              ...initialMatch,
-              homeScore: existing.homeScore,
-              awayScore: existing.awayScore,
-              status: existing.status
-            };
-          }
-          return initialMatch;
-        });
-        loadedState.matches = updatedMatches;
+      if (needsUpgrade || cleanedParticipants) {
+        if (needsUpgrade) {
+          console.log("[Server] Differences detected on boot. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
+          const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
+            const existing = (loadedState.matches || []).find(m => m.id === initialMatch.id);
+            if (existing) {
+              return {
+                ...initialMatch,
+                homeScore: existing.homeScore,
+                awayScore: existing.awayScore,
+                status: existing.status
+              };
+            }
+            return initialMatch;
+          });
+          loadedState.matches = updatedMatches;
+        }
+        if (cleanedParticipants) {
+          console.log("[Server] Removed test/unregistered participants and their guesses from boot state.");
+        }
         // Keep participants
         loadedState.participants = loadedState.participants || [];
         // Keep guesses but reset guesses for matches that no longer exist
@@ -228,6 +258,11 @@ export async function createApp() {
     const trimmedName = participantName.trim();
     if (!trimmedName) {
       return res.status(400).json({ error: "Nome do participante vazio" });
+    }
+
+    const isPredefined = PREDEFINED_PARTICIPANTS.some(pp => pp.toLowerCase() === trimmedName.toLowerCase());
+    if (!isPredefined) {
+      return res.status(400).json({ error: "Nome de participante não cadastrado no sistema!" });
     }
 
     const match = state.matches.find(m => m.id === matchId);
