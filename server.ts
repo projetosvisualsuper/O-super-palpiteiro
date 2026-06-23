@@ -122,40 +122,25 @@ async function getLatestState(forceRefresh = false): Promise<AppState> {
         );
         const cleanedParticipants = (loaded.participants || []).length !== initialCount;
 
-        // Check if loaded state contains old matches or structure mismatches and needs an upgrade
-        const idsLoaded = (loaded.matches || []).map(m => m.id).sort().join(',');
-        const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
-        
-        const matchupsLoaded = (loaded.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-        const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-        
-        const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
-        
-        if (needsUpgrade || cleanedParticipants) {
-          if (needsUpgrade) {
-            console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-            const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
-              const existing = (loaded.matches || []).find(m => m.id === initialMatch.id);
-              if (existing) {
-                return {
-                  ...initialMatch,
-                  homeScore: existing.homeScore,
-                  awayScore: existing.awayScore,
-                  status: existing.status
-                };
-              }
-              return initialMatch;
-            });
-            loaded.matches = updatedMatches;
+        // SAFE upgrade: only ADD new match IDs not yet in the DB.
+        // NEVER overwrite existing match data (teams, times, scores) from local code.
+        const loadedMatchIds = new Set((loaded.matches || []).map(m => m.id));
+        const newMatches = INITIAL_MATCHES.filter(im => !loadedMatchIds.has(im.id));
+        const needsUpgrade = newMatches.length > 0 || cleanedParticipants;
+
+        if (needsUpgrade) {
+          if (newMatches.length > 0) {
+            console.log(`[Server] Adding ${newMatches.length} new match(es) not yet in Firestore.`);
+            loaded.matches = [...(loaded.matches || []), ...newMatches];
           }
           if (cleanedParticipants) {
             console.log("[Server] Removed test/unregistered participants and their guesses from state.");
           }
-          // Keep participants
+          // Always keep participants and guesses
           loaded.participants = loaded.participants || [];
-          // Keep guesses but reset guesses for matches that no longer exist
-          loaded.guesses = (loaded.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-          // Recalculate leaderboard
+          loaded.guesses = (loaded.guesses || []).filter(g =>
+            (loaded.matches || []).some(m => m.id === g.matchId)
+          );
           state = loaded;
           recalculateLeaderboard();
           await saveAppState(state);
@@ -191,39 +176,25 @@ export async function createApp() {
       );
       const cleanedParticipants = (loadedState.participants || []).length !== initialCount;
 
-      // Check if loaded state contains old matches or structure mismatches and needs an upgrade
-      const idsLoaded = (loadedState.matches || []).map(m => m.id).sort().join(',');
-      const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
-      
-      const matchupsLoaded = (loadedState.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-      const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-      
-      const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
+      // SAFE upgrade: only ADD new match IDs not yet in the DB.
+      // NEVER overwrite existing match data (teams, times, scores) from local code.
+      const loadedMatchIds = new Set((loadedState.matches || []).map(m => m.id));
+      const newMatches = INITIAL_MATCHES.filter(im => !loadedMatchIds.has(im.id));
+      const needsUpgrade = newMatches.length > 0 || cleanedParticipants;
 
-      if (needsUpgrade || cleanedParticipants) {
-        if (needsUpgrade) {
-          console.log("[Server] Differences detected on boot. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-          const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
-            const existing = (loadedState.matches || []).find(m => m.id === initialMatch.id);
-            if (existing) {
-              return {
-                ...initialMatch,
-                homeScore: existing.homeScore,
-                awayScore: existing.awayScore,
-                status: existing.status
-              };
-            }
-            return initialMatch;
-          });
-          loadedState.matches = updatedMatches;
+      if (needsUpgrade) {
+        if (newMatches.length > 0) {
+          console.log(`[Server] Adding ${newMatches.length} new match(es) not yet in Firestore.`);
+          loadedState.matches = [...(loadedState.matches || []), ...newMatches];
         }
         if (cleanedParticipants) {
           console.log("[Server] Removed test/unregistered participants and their guesses from boot state.");
         }
-        // Keep participants
+        // Always keep participants and guesses
         loadedState.participants = loadedState.participants || [];
-        // Keep guesses but reset guesses for matches that no longer exist
-        loadedState.guesses = (loadedState.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        loadedState.guesses = (loadedState.guesses || []).filter(g =>
+          (loadedState.matches || []).some(m => m.id === g.matchId)
+        );
         state = loadedState;
         recalculateLeaderboard();
         await saveAppState(state);
