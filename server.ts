@@ -84,36 +84,44 @@ function recalculateLeaderboard() {
   });
 }
 
-async function getLatestState(): Promise<AppState> {
-  try {
-    const loaded = await loadAppState();
-    if (loaded) {
-      // Check if loaded state contains old matches or structure mismatches and needs an upgrade
-      const idsLoaded = (loaded.matches || []).map(m => m.id).sort().join(',');
-      const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
-      
-      const matchupsLoaded = (loaded.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-      const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
-      
-      const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
-      
-      if (needsUpgrade) {
-        console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-        loaded.matches = [...INITIAL_MATCHES];
-        // Keep participants and guesses but reset guesses for matches that no longer exist
-        loaded.guesses = (loaded.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-        // Reset old static points to new recalculated ones
-        loaded.participants = [...INITIAL_PARTICIPANTS];
-        // Recalculate leaderboard
-        state = loaded;
-        recalculateLeaderboard();
-        await saveAppState(state);
-      } else {
-        state = loaded;
+let lastDbLoadTime = 0;
+const DB_CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+
+async function getLatestState(forceRefresh = false): Promise<AppState> {
+  const now = Date.now();
+  if (forceRefresh || (now - lastDbLoadTime > DB_CACHE_TTL) || lastDbLoadTime === 0) {
+    try {
+      console.log(`[Server] ${forceRefresh ? 'Forced' : 'Cache expired'}. Loading state from Firestore...`);
+      const loaded = await loadAppState();
+      if (loaded) {
+        // Check if loaded state contains old matches or structure mismatches and needs an upgrade
+        const idsLoaded = (loaded.matches || []).map(m => m.id).sort().join(',');
+        const idsInitial = INITIAL_MATCHES.map(m => m.id).sort().join(',');
+        
+        const matchupsLoaded = (loaded.matches || []).map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+        const matchupsInitial = INITIAL_MATCHES.map(m => `${m.id}:${m.homeTeam}x${m.awayTeam}`).sort().join(',');
+        
+        const needsUpgrade = idsLoaded !== idsInitial || matchupsLoaded !== matchupsInitial;
+        
+        if (needsUpgrade) {
+          console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
+          loaded.matches = [...INITIAL_MATCHES];
+          // Keep participants and guesses but reset guesses for matches that no longer exist
+          loaded.guesses = (loaded.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+          // Reset old static points to new recalculated ones
+          loaded.participants = [...INITIAL_PARTICIPANTS];
+          // Recalculate leaderboard
+          state = loaded;
+          recalculateLeaderboard();
+          await saveAppState(state);
+        } else {
+          state = loaded;
+        }
+        lastDbLoadTime = now;
       }
+    } catch (e) {
+      console.error("[Firebase] Error fetching latest state inside request:", e);
     }
-  } catch (e) {
-    console.error("[Firebase] Error fetching latest state inside request:", e);
   }
   return state;
 }
@@ -150,11 +158,13 @@ export async function createApp() {
       } else {
         state = loadedState;
       }
-      console.log("[Server] State loaded from Firestore database successfully.");
-    } else {
-      console.log("[Server] No state found in Firestore. Saving current default state.");
-      await saveAppState(state);
-    }
+       console.log("[Server] State loaded from Firestore database successfully.");
+       lastDbLoadTime = Date.now();
+     } else {
+       console.log("[Server] No state found in Firestore. Saving current default state.");
+       await saveAppState(state);
+       lastDbLoadTime = Date.now();
+     }
   } catch (error) {
     console.error("[Server] Error syncing initial state with Firestore:", error);
   }
@@ -424,6 +434,18 @@ export async function createApp() {
     
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on config edit:", err));
     res.json({ success: true, state });
+  });
+
+  // Admin: Reload State from Firestore manually (clears cache)
+  app.post("/api/admin/reload-db", async (req, res) => {
+    try {
+      console.log("[Server] Admin forced reload from Firestore database.");
+      const latestState = await getLatestState(true);
+      res.json({ success: true, state: latestState });
+    } catch (error) {
+      console.error("[Server] Error during manual database reload:", error);
+      res.status(500).json({ error: "Erro ao recarregar do banco de dados" });
+    }
   });
 
   // Reset demo state

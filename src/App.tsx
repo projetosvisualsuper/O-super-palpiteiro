@@ -294,8 +294,8 @@ export default function App() {
 
     fetchState();
     
-    // Poll every 3 seconds for active sync!
-    const interval = setInterval(fetchState, 3000);
+    // Poll every 30 seconds to fetch state from Express server cache
+    const interval = setInterval(fetchState, 30000);
     return () => clearInterval(interval);
   }, [selectedMatchForGuess]);
 
@@ -480,6 +480,25 @@ export default function App() {
       }
     } catch (err) {
       console.error('Erro ao salvar configurações do painel:', err);
+    }
+  };
+
+  // Admin: Force reload state from Firestore database
+  const reloadDatabase = async () => {
+    try {
+      const res = await fetch('/api/admin/reload-db', {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppState(data.state);
+        alert('Dados atualizados com sucesso do banco de dados (Firebase)!');
+      } else {
+        alert('Falha ao recarregar dados do banco de dados.');
+      }
+    } catch (err) {
+      console.error('Erro ao recarregar banco de dados:', err);
+      alert('Erro de rede ao conectar com o banco de dados.');
     }
   };
 
@@ -1460,13 +1479,23 @@ export default function App() {
                     </button>
                   </div>
 
-                  <button
-                    onClick={resetDemoState}
-                    className="bg-red-950/50 hover:bg-red-900/50 text-red-400 font-bold border border-red-950/80 px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer animate-pulse"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Resetar Servidor para o Padrão
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={reloadDatabase}
+                      className="bg-emerald-950/70 hover:bg-emerald-900/60 text-emerald-400 font-bold border border-emerald-950 px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Atualizar do Banco de Dados
+                    </button>
+
+                    <button
+                      onClick={resetDemoState}
+                      className="bg-red-950/50 hover:bg-red-900/50 text-red-400 font-bold border border-red-950/80 px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Resetar Servidor para o Padrão
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
