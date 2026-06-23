@@ -600,6 +600,26 @@ export async function createApp() {
     res.json({ success: true, state: getCleanState(state) });
   });
 
+  // Fix match times: shift all match dateTimes by +3h (Brasília offset)
+  // Used when times were entered in local BRT time but stored without UTC offset correction
+  app.post("/api/admin/fix-match-times", async (req, res) => {
+    await getLatestState();
+    const { offsetHours = 3 } = req.body; // default +3h for Brasília (BRT = UTC-3)
+    const offsetMs = offsetHours * 60 * 60 * 1000;
+    state.matches = state.matches.map(m => ({
+      ...m,
+      dateTime: new Date(new Date(m.dateTime).getTime() + offsetMs).toISOString()
+    }));
+    try {
+      await saveAppState(state);
+      console.log(`[Admin] Fixed match times: shifted all by +${offsetHours}h`);
+      res.json({ success: true, shifted: offsetHours, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error saving fixed match times:", err);
+      res.status(500).json({ error: "Erro ao salvar horários corrigidos no banco de dados" });
+    }
+  });
+
   // Vite Integration & SPA asset delivery
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

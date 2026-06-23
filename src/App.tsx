@@ -1126,7 +1126,7 @@ export default function App() {
                     {/* Badge top status */}
                     <div className="flex items-center justify-between text-[10px] mb-1.5 font-mono font-bold">
                       <span className="text-slate-400">
-                        {new Date(match.dateTime.replace('Z', '')).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(match.dateTime.replace('Z', '')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
+                        {new Date(match.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Sao_Paulo' })} às {new Date(match.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} • 2026
                       </span>
                       {isLive ? (
                         <span className="px-1.5 py-0.5 rounded bg-red-600 text-white font-extrabold uppercase animate-pulse flex items-center gap-1 text-[9px]">
@@ -2235,7 +2235,7 @@ export default function App() {
                       }
                       return (
                         <span className={`text-[9px] font-mono ${selectedMatchForGuess === m.id ? 'text-emerald-100' : 'text-slate-500'}`}>
-                          {matchTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • {matchTime.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                          {matchTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} • {matchTime.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', timeZone: 'America/Sao_Paulo' }).toUpperCase()}
                         </span>
                       );
                     })()}
@@ -2264,7 +2264,7 @@ export default function App() {
                       
                       {/* Match header details */}
                       <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3 text-center">
-                        {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(activeMatch.dateTime.replace('Z', '')).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
+                        {new Date(activeMatch.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Sao_Paulo' })} às {new Date(activeMatch.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })} • 2026
                       </div>
 
                       {/* Numeric Input scoreboard score selection row */}
