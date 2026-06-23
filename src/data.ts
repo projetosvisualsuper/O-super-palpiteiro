@@ -9,6 +9,7 @@ export const INITIAL_RULES: RulePointConfig = {
 };
 
 export const INITIAL_MATCHES: Match[] = [
+  // ====== 20 DE JUNHO (Sábado) ======
   {
     id: 'm_real_1',
     homeTeam: 'Turquia',
@@ -18,7 +19,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 0,
     awayScore: 1,
     status: 'finished',
-    dateTime: '2026-06-20T13:00:00Z',
+    dateTime: '2026-06-20T03:00:00Z', // 00:00 BRT
   },
   {
     id: 'm_real_2',
@@ -29,7 +30,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 5,
     awayScore: 1,
     status: 'finished',
-    dateTime: '2026-06-20T16:00:00Z',
+    dateTime: '2026-06-20T17:00:00Z', // 14:00 BRT
   },
   {
     id: 'm_real_3',
@@ -40,7 +41,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 2,
     awayScore: 1,
     status: 'finished',
-    dateTime: '2026-06-20T19:00:00Z',
+    dateTime: '2026-06-20T20:00:00Z', // 17:00 BRT
   },
   {
     id: 'm_real_4',
@@ -51,8 +52,9 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 0,
     awayScore: 0,
     status: 'finished',
-    dateTime: '2026-06-20T22:00:00Z',
+    dateTime: '2026-06-21T00:00:00Z', // 21:00 BRT
   },
+  // ====== 21 DE JUNHO (Domingo) ======
   {
     id: 'm_real_5',
     homeTeam: 'Tunísia',
@@ -62,7 +64,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 0,
     awayScore: 4,
     status: 'finished',
-    dateTime: '2026-06-21T13:00:00Z',
+    dateTime: '2026-06-21T04:00:00Z', // 01:00 BRT
   },
   {
     id: 'm_real_6',
@@ -73,7 +75,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 4,
     awayScore: 0,
     status: 'finished',
-    dateTime: '2026-06-21T16:00:00Z',
+    dateTime: '2026-06-21T16:00:00Z', // 13:00 BRT
   },
   {
     id: 'm_real_7',
@@ -84,7 +86,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 0,
     awayScore: 0,
     status: 'finished',
-    dateTime: '2026-06-21T19:00:00Z',
+    dateTime: '2026-06-21T19:00:00Z', // 16:00 BRT
   },
   {
     id: 'm_real_8',
@@ -95,7 +97,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 2,
     awayScore: 2,
     status: 'finished',
-    dateTime: '2026-06-21T22:00:00Z',
+    dateTime: '2026-06-21T22:00:00Z', // 19:00 BRT
   },
   {
     id: 'm_real_9',
@@ -106,8 +108,9 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 1,
     awayScore: 3,
     status: 'finished',
-    dateTime: '2026-06-21T22:00:00Z',
+    dateTime: '2026-06-22T01:00:00Z', // 22:00 BRT
   },
+  // ====== 22 DE JUNHO (Segunda-feira) ======
   {
     id: 'm_real_10',
     homeTeam: 'Argentina',
@@ -117,7 +120,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 2,
     awayScore: 0,
     status: 'finished',
-    dateTime: '2026-06-22T13:00:00Z',
+    dateTime: '2026-06-22T17:00:00Z', // 14:00 BRT
   },
   {
     id: 'm_real_11',
@@ -128,7 +131,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 3,
     awayScore: 0,
     status: 'finished',
-    dateTime: '2026-06-22T16:00:00Z',
+    dateTime: '2026-06-22T21:00:00Z', // 18:00 BRT
   },
   {
     id: 'm_real_12',
@@ -139,8 +142,9 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 3,
     awayScore: 2,
     status: 'finished',
-    dateTime: '2026-06-22T19:00:00Z',
+    dateTime: '2026-06-23T00:00:00Z', // 21:00 BRT
   },
+  // ====== 23 DE JUNHO (Terça-feira) ======
   {
     id: 'm_real_13',
     homeTeam: 'Jordânia',
@@ -150,7 +154,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: 1,
     awayScore: 2,
     status: 'finished',
-    dateTime: '2026-06-23T12:00:00Z',
+    dateTime: '2026-06-23T03:00:00Z', // 00:00 BRT
   },
   {
     id: 'm_real_14',
@@ -161,7 +165,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-23T14:00:00Z',
+    dateTime: '2026-06-23T17:00:00Z', // 14:00 BRT
   },
   {
     id: 'm_real_15',
@@ -172,7 +176,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-23T17:00:00Z',
+    dateTime: '2026-06-23T20:00:00Z', // 17:00 BRT
   },
   {
     id: 'm_real_16',
@@ -183,7 +187,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-23T20:00:00Z',
+    dateTime: '2026-06-23T23:00:00Z', // 20:00 BRT
   },
   {
     id: 'm_real_17',
@@ -194,8 +198,9 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-23T23:00:00Z',
+    dateTime: '2026-06-24T02:00:00Z', // 23:00 BRT
   },
+  // ====== 24 DE JUNHO (Quarta-feira) ======
   {
     id: 'm_real_18',
     homeTeam: 'Suíça',
@@ -205,7 +210,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T16:00:00Z',
+    dateTime: '2026-06-24T19:00:00Z', // 16:00 BRT
   },
   {
     id: 'm_real_19',
@@ -216,7 +221,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T16:00:00Z',
+    dateTime: '2026-06-24T19:00:00Z', // 16:00 BRT
   },
   {
     id: 'm_real_20',
@@ -227,7 +232,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T19:00:00Z',
+    dateTime: '2026-06-24T22:00:00Z', // 19:00 BRT
   },
   {
     id: 'm_real_21',
@@ -238,7 +243,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T19:00:00Z',
+    dateTime: '2026-06-24T22:00:00Z', // 19:00 BRT
   },
   {
     id: 'm_real_22',
@@ -249,7 +254,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T22:00:00Z',
+    dateTime: '2026-06-25T01:00:00Z', // 22:00 BRT
   },
   {
     id: 'm_real_23',
@@ -260,7 +265,7 @@ export const INITIAL_MATCHES: Match[] = [
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-24T22:00:00Z',
+    dateTime: '2026-06-25T01:00:00Z', // 22:00 BRT
   }
 ];
 
