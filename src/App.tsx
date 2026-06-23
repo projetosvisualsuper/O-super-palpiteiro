@@ -1327,18 +1327,38 @@ export default function App() {
 
                 {adminTab === 'history' ? (
                   <div className="space-y-4">
-                    {/* Search query input */}
+                    {/* Participant filter dropdown */}
                     <div className="flex items-center gap-2 bg-slate-950 p-3.5 rounded-2xl border border-slate-850">
                       <div className="flex-1">
-                        <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Pesquisar por Usuário</label>
-                        <input
-                          type="text"
+                        <label className="block text-[10px] font-bold text-slate-450 uppercase mb-1.5">Filtrar por Participante</label>
+                        <select
                           value={adminSearchQuery}
                           onChange={(e) => setAdminSearchQuery(e.target.value)}
-                          placeholder="Digite o nome do participante (ex: Joelson)"
-                          className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-emerald-500 font-semibold"
-                        />
+                          className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-emerald-500 font-semibold cursor-pointer"
+                        >
+                          <option value="">👥 Todos os participantes</option>
+                          {(() => {
+                            // Build unique participant list from guesses + registered participants
+                            const namesFromGuesses = [...new Set((appState?.guesses || []).map(g => g.participantName))].sort();
+                            const namesFromParticipants = (appState?.participants || []).map(p => p.name);
+                            const allNames = [...new Set([...namesFromGuesses, ...namesFromParticipants])].sort();
+                            return allNames.map(name => (
+                              <option key={name} value={name} className="bg-slate-950 text-slate-100">
+                                {name}
+                              </option>
+                            ));
+                          })()}
+                        </select>
                       </div>
+                      {adminSearchQuery && (
+                        <button
+                          onClick={() => setAdminSearchQuery('')}
+                          className="mt-5 p-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg transition cursor-pointer"
+                          title="Limpar filtro"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
 
                     {/* Guesses list/table */}
