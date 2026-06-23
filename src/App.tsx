@@ -682,10 +682,10 @@ export default function App() {
     );
   }
 
-  const nextMatches = appState?.matches.filter(m => {
-    const isPast = new Date(m.dateTime).getTime() <= Date.now();
-    return m.status === 'scheduled' && !isPast;
-  }) || [];
+  // Show all scheduled matches in mobile. The backend enforces the timing cutoff
+  // and will reject palpites submitted after match start time.
+  // This avoids matches disappearing from the list due to minor clock differences.
+  const nextMatches = appState?.matches.filter(m => m.status === 'scheduled') || [];
   const finishedMatches = appState?.matches.filter(m => m.status === 'finished') || [];
   const currentNextMatch = nextMatches[0] || appState?.matches[0];
 
@@ -2218,16 +2218,27 @@ export default function App() {
                     key={m.id}
                     onClick={() => setSelectedMatchForGuess(m.id)}
                     type="button"
-                    className={`px-3 py-2.5 rounded-xl border font-bold text-xs shrink-0 flex items-center gap-2 transition ${selectedMatchForGuess === m.id ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-700/20' : 'bg-slate-950/60 text-slate-400 border-slate-900 hover:bg-slate-900'}`}
+                    className={`px-3 py-2.5 rounded-xl border font-bold text-xs shrink-0 flex flex-col items-center gap-1.5 transition min-w-[120px] ${selectedMatchForGuess === m.id ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-700/20' : 'bg-slate-950/60 text-slate-300 border-slate-900 hover:bg-slate-900'}`}
                   >
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {renderFlag(m.homeFlag, m.homeTeam)}
-                      <span className="text-[10px] text-slate-500 font-normal mx-0.5">vs</span>
+                      <span className="font-bold text-[10px] leading-none">{m.homeTeam}</span>
+                      <span className={`text-[10px] font-normal mx-0.5 ${selectedMatchForGuess === m.id ? 'text-emerald-100' : 'text-slate-500'}`}>vs</span>
+                      <span className="font-bold text-[10px] leading-none">{m.awayTeam}</span>
                       {renderFlag(m.awayFlag, m.awayTeam)}
                     </div>
-                    <span className="text-[9px] font-mono bg-slate-900/60 px-1.5 py-0.5 rounded text-slate-300">
-                      {m.homeTeam}
-                    </span>
+                    {(() => {
+                      const matchTime = new Date(m.dateTime);
+                      const isPast = matchTime.getTime() <= Date.now();
+                      if (isPast) {
+                        return <span className="text-[9px] font-mono font-bold bg-red-900/60 text-red-300 px-1.5 py-0.5 rounded border border-red-800/40">PALPITES ENCERRADOS</span>;
+                      }
+                      return (
+                        <span className={`text-[9px] font-mono ${selectedMatchForGuess === m.id ? 'text-emerald-100' : 'text-slate-500'}`}>
+                          {matchTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • {matchTime.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).toUpperCase()}
+                        </span>
+                      );
+                    })()}
                   </button>
                 ))
               )}
