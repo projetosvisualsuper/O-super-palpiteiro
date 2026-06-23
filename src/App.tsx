@@ -24,6 +24,54 @@ import {
 } from 'lucide-react';
 import { Match, Participant, Guess, AppState } from './types';
 
+function getFlagImgUrl(emoji: string, countryName?: string): string {
+  if (!emoji) return '';
+  
+  const lowerName = (countryName || '').toLowerCase().trim();
+  if (emoji.includes('🏴󠁧󠁢󠁥󠁮󠁧󠁿') || lowerName.includes('inglaterra') || lowerName.includes('england')) {
+    return 'https://flagcdn.com/w40/gb-eng.png';
+  }
+  if (emoji.includes('🏴󠁧󠁢󠁳󠁣󠁴󠁿') || lowerName.includes('escócia') || lowerName.includes('scotland')) {
+    return 'https://flagcdn.com/w40/gb-sct.png';
+  }
+  if (emoji.includes('🏴󠁧󠁢󠁷󠁬󠁳󠁿') || lowerName.includes('galas') || lowerName.includes('wales')) {
+    return 'https://flagcdn.com/w40/gb-wls.png';
+  }
+
+  const codePoints = Array.from(emoji).map(char => char.codePointAt(0));
+  const cc = codePoints
+    .map(cp => {
+      if (cp && cp >= 0x1F1E6 && cp <= 0x1F1FF) {
+        return String.fromCharCode(cp - 0x1F1E6 + 97);
+      }
+      return '';
+    })
+    .join('');
+    
+  if (cc.length === 2) {
+    return `https://flagcdn.com/w40/${cc}.png`;
+  }
+  
+  return '';
+}
+
+function renderFlag(flagEmoji: string, teamName: string) {
+  const url = getFlagImgUrl(flagEmoji, teamName);
+  if (url) {
+    return (
+      <img 
+        src={url} 
+        alt={teamName} 
+        className="w-6 h-4 object-cover rounded shadow-sm border border-slate-800 shrink-0" 
+        onError={(e) => {
+          (e.target as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  }
+  return <span className="text-xl shrink-0 filter drop-shadow-md select-none">{flagEmoji}</span>;
+}
+
 export default function App() {
   const [view, setView] = useState<'tv' | 'mobile'>('tv');
   const [appState, setAppState] = useState<AppState | null>(null);
@@ -64,28 +112,45 @@ export default function App() {
   const filteredMatches = useMemo(() => {
     if (!appState?.matches) return [];
     const allMatches = [...appState.matches];
+
+    // Helper to get YYYY-MM-DD local format to avoid timezone offsets and regional formatting discrepancies
+    const getLocalDateString = (isoString: string) => {
+      const d = new Date(isoString);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const getLocalDateStringFromDate = (d: Date) => {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const todayObj = new Date();
+    const todayStr = getLocalDateStringFromDate(todayObj);
+
+    const yesterdayObj = new Date();
+    yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+    const yesterdayStr = getLocalDateStringFromDate(yesterdayObj);
+
+    const tomorrowObj = new Date();
+    tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+    const tomorrowStr = getLocalDateStringFromDate(tomorrowObj);
     
     switch (matchTab) {
       case 'results':
-        // Finished matches (or has scores), sorted by date descending (most recent first)
+        // Show ONLY matches of the previous day (yesterday)
         return allMatches
-          .filter(m => m.status === 'finished' || m.homeScore !== null || m.awayScore !== null)
-          .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+          .filter(m => getLocalDateString(m.dateTime) === yesterdayStr)
+          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
       
       case 'upcoming':
-        // Scheduled/live matches (no final score yet), sorted by date ascending (closest first)
+        // Show ONLY matches of the current day (today)
         return allMatches
-          .filter(m => m.status === 'scheduled' || m.status === 'live')
+          .filter(m => getLocalDateString(m.dateTime) === todayStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       case 'brazil':
-        // Matches involving "Brasil" (case insensitive)
+        // Show ONLY matches of the following day (tomorrow)
         return allMatches
-          .filter(m => {
-            const home = m.homeTeam.toLowerCase().trim();
-            const away = m.awayTeam.toLowerCase().trim();
-            return home === 'brasil' || away === 'brasil';
-          })
+          .filter(m => getLocalDateString(m.dateTime) === tomorrowStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       default:
@@ -93,7 +158,7 @@ export default function App() {
     }
   }, [appState?.matches, matchTab]);
 
-  // Handle automatic rotation on TV screen (10 seconds per tab)
+  // Handle automatic rotation on TV screen (25 seconds per tab)
   useEffect(() => {
     if (view !== 'tv') return;
 
@@ -105,14 +170,14 @@ export default function App() {
         return tabs[nextIndex];
       });
       setRotationProgress(0);
-    }, 10000); // 10 seconds per tab
+    }, 25000); // 25 seconds per tab
 
     const progressInterval = setInterval(() => {
       setRotationProgress((prev) => {
         if (prev >= 100) return 0;
         return prev + 1;
       });
-    }, 100); // 100 * 100ms = 10000ms
+    }, 250); // 250ms * 100 steps = 25000ms (25 seconds)
 
     return () => {
       clearInterval(interval);
@@ -411,14 +476,14 @@ export default function App() {
 
   const handleAdminLogin = (password: string) => {
     const cleanPass = password.trim();
-    if (cleanPass === 'admin' || cleanPass === '1234' || cleanPass === 'palpite2026') {
+    if (cleanPass === 'visualcopa2026') {
       setIsAdmin(true);
       localStorage.setItem('is_admin', 'true');
       setPasswordModalOpen(false);
       setAdminPasswordInput('');
       setPasswordError('');
     } else {
-      setPasswordError('Senha incorreta! Use "admin", "1234" ou "palpite2026".');
+      setPasswordError('Senha incorreta! Digite a senha administrativa correta.');
     }
   };
 
@@ -547,8 +612,8 @@ export default function App() {
                 <Trophy className="w-4 h-4 text-yellow-400" />
                 RANKING ATUALIZADO
               </h2>
-              <span className="text-[10px] font-mono font-bold text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded bg-emerald-950/20">
-                PONTOS ESTILO CAZÉ
+              <span className="text-[10px] font-mono font-bold text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded bg-emerald-950/20 uppercase tracking-wider">
+                PONTUAÇÃO
               </span>
             </div>
 
@@ -573,20 +638,20 @@ export default function App() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.08 }}
-                      className="bg-slate-950/50 hover:bg-slate-900/80 px-3 py-2 rounded-lg border border-slate-900 flex items-center justify-between transition-colors duration-150"
+                      className="bg-slate-950/50 hover:bg-slate-900/80 px-3 py-2.5 rounded-lg border border-slate-900 flex items-center justify-between transition-colors duration-150"
                     >
                       <div className="flex items-center gap-3">
                         {/* Rank Badge */}
-                        <div className={`w-8 h-8 rounded-md font-display font-black text-sm flex items-center justify-center shrink-0 ${index < 3 ? placeColors[index] : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
+                        <div className={`w-9 h-9 rounded-md font-display font-black text-base flex items-center justify-center shrink-0 ${index < 3 ? placeColors[index] : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
                           {index + 1}º
                         </div>
                         {/* Name & Stats */}
                         <div>
-                          <div className="font-extrabold text-slate-100 flex items-center gap-1.5 text-sm">
+                          <div className="font-extrabold text-slate-100 flex items-center gap-1.5 text-base">
                             <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: p.avatarColor }} />
                             {p.name}
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-slate-400 font-mono mt-0.5">
+                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400 font-mono mt-0.5">
                             <span>{p.exactScores} Placar Cheio ({appState?.rules?.exactScore ?? 10} pts)</span>
                             <span className="text-slate-650">•</span>
                             <span>{p.correctWinners} Vencedores ({appState?.rules?.winnerOnly ?? 5} pts)</span>
@@ -596,8 +661,8 @@ export default function App() {
 
                       {/* Points Glow representation */}
                       <div className="text-right pl-2 shrink-0">
-                        <div className="font-display font-black text-lg text-emerald-400 tracking-tight">
-                          {p.points} <span className="text-[10px] text-slate-400 font-normal">pts</span>
+                        <div className="font-display font-black text-xl text-emerald-400 tracking-tight">
+                          {p.points} <span className="text-xs text-slate-450 font-normal">pts</span>
                         </div>
                       </div>
                     </motion.div>
@@ -640,44 +705,45 @@ export default function App() {
             </div>
 
             {/* EXPANDABLE/DYNAMIC PRIZE BANNER FOR WINNER (MARKED IN RED ON REQUEST IMAGE) */}
-            <div className="w-full max-w-sm bg-linear-to-r from-yellow-500/10 via-emerald-555/15 to-slate-900/80 backdrop-blur-md border border-yellow-500/35 rounded-xl p-2.5 flex items-center gap-3 relative overflow-hidden shadow-[0_0_15px_rgba(234,179,8,0.1)] group">
+            <div className="w-full max-w-sm bg-gradient-to-r from-yellow-950/40 via-slate-900/95 to-emerald-950/30 backdrop-blur-md border-2 border-yellow-500/80 rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden shadow-[0_0_25px_rgba(234,179,8,0.25)] group transition duration-300 hover:scale-102">
               {/* Dynamic decorative neon edge lights */}
-              <div className="absolute top-0 left-0 w-8 h-0.5 bg-yellow-400" />
-              <div className="absolute top-0 left-0 w-0.5 h-8 bg-yellow-400" />
-              <div className="absolute bottom-0 right-0 w-8 h-0.5 bg-emerald-400" />
-              <div className="absolute bottom-0 right-0 w-0.5 h-8 bg-emerald-400" />
+              <div className="absolute top-0 left-0 w-12 h-1 bg-yellow-400 animate-pulse" />
+              <div className="absolute top-0 left-0 w-1 h-12 bg-yellow-400 animate-pulse" />
+              <div className="absolute bottom-0 right-0 w-12 h-1 bg-emerald-400 animate-pulse" />
+              <div className="absolute bottom-0 right-0 w-1 h-12 bg-emerald-400 animate-pulse" />
               
               {/* Spinning/pulsing radar ring for visual texture */}
-              <div className="absolute -right-6 -bottom-6 w-16 h-16 bg-yellow-400/5 rounded-full blur-xl animate-pulse" />
+              <div className="absolute -right-6 -bottom-6 w-20 h-20 bg-yellow-400/10 rounded-full blur-xl animate-pulse" />
+              <div className="absolute -left-6 -top-6 w-20 h-20 bg-emerald-400/5 rounded-full blur-xl animate-pulse" />
               
               {/* Prize icon context block */}
-              <div className="bg-gradient-to-br from-yellow-400 to-amber-600 p-2 rounded-lg shadow-lg relative shrink-0 flex items-center justify-center border border-yellow-300/35">
+              <div className="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-3 rounded-xl shadow-xl relative shrink-0 flex items-center justify-center border-2 border-yellow-300/40">
                 {appState?.prizeImage ? (
                   <img 
                     src={appState.prizeImage} 
                     alt="Prêmio" 
-                    className="w-8 h-8 object-contain rounded"
+                    className="w-9 h-9 object-contain rounded"
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <Gift className="w-5 h-5 text-slate-950 animate-bounce" />
+                  <Gift className="w-6.5 h-6.5 text-slate-950 animate-bounce" />
                 )}
-                <div className="absolute -top-1 -right-1 bg-slate-950 border border-yellow-400 text-yellow-400 rounded-full p-0.5">
-                  <Sparkles className="w-2.5 h-2.5" />
+                <div className="absolute -top-1.5 -right-1.5 bg-slate-950 border border-yellow-400 text-yellow-400 rounded-full p-0.5 shadow-md">
+                  <Sparkles className="w-3 h-3 animate-pulse" />
                 </div>
               </div>
 
               {/* Prize content elements info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1">
-                  <span className="text-[8px] font-mono font-black tracking-widest text-yellow-400 uppercase bg-yellow-400/15 px-1.5 py-0.5 rounded border border-yellow-400/20">
+                  <span className="text-[9px] font-mono font-black tracking-widest text-yellow-400 uppercase bg-yellow-400/20 px-2 py-0.5 rounded border border-yellow-400/35">
                     🏆 PRÊMIO DO CAMPEÃO 🏆
                   </span>
                 </div>
-                <h3 className="font-display font-black text-sm text-slate-100 uppercase tracking-tight mt-1 group-hover:text-yellow-455 transition duration-150 leading-tight">
+                <h3 className="font-display font-black text-base text-yellow-400 uppercase tracking-tight mt-1.5 transition duration-150 leading-tight">
                   {appState?.prizeName || "SMART TV 55\" OLED 4K + COLO COLADO"}
                 </h3>
-                <p className="text-[9px] text-slate-405 font-medium leading-tight mt-0.5 line-clamp-2">
+                <p className="text-[11px] text-slate-300 font-semibold leading-relaxed mt-1 line-clamp-3">
                   {appState?.prizeDescription || "O melhor de todos os palpiteiros receberá um Smart TV de última geração com entrega garantida!"}
                 </p>
               </div>
@@ -751,19 +817,19 @@ export default function App() {
                 onClick={() => { setMatchTab('results'); setRotationProgress(0); }}
                 className={`text-[9.5px] font-black uppercase tracking-wider py-1.5 px-1 rounded-lg text-center transition-all duration-150 cursor-pointer ${matchTab === 'results' ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}
               >
-                Últimos Jogos
+                ⏪ Anteriores
               </button>
               <button 
                 onClick={() => { setMatchTab('upcoming'); setRotationProgress(0); }}
                 className={`text-[9.5px] font-black uppercase tracking-wider py-1.5 px-1 rounded-lg text-center transition-all duration-150 cursor-pointer ${matchTab === 'upcoming' ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}
               >
-                Próximos Jogos
+                ⚽ Atuais
               </button>
               <button 
                 onClick={() => { setMatchTab('brazil'); setRotationProgress(0); }}
                 className={`text-[9.5px] font-black uppercase tracking-wider py-1.5 px-1 rounded-lg text-center transition-all duration-150 cursor-pointer ${matchTab === 'brazil' ? 'bg-emerald-600/20 border border-emerald-500/30 text-emerald-400' : 'text-slate-400 hover:text-slate-200 border border-transparent'}`}
               >
-                🇧🇷 Do Brasil
+                ⏩ Próximos
               </button>
             </div>
 
@@ -785,10 +851,10 @@ export default function App() {
                   <h4 className="text-xs text-slate-350 uppercase tracking-wider">Sem Partidas Encontradas</h4>
                   <p className="text-[10px] text-slate-500 leading-normal mt-1 max-w-[200px]">
                     {matchTab === 'results' 
-                      ? 'Nenhuma partida finalizada ainda nesta edição.'
+                      ? 'Nenhuma partida realizada no dia de ontem.'
                       : matchTab === 'upcoming'
-                      ? 'Não há novos jogos agendados ou em andamento.'
-                      : 'Nenhuma partida da Seleção Brasileira cadastrada.'}
+                      ? 'Nenhuma partida agendada para o dia de hoje.'
+                      : 'Nenhuma partida agendada para o dia de amanhã.'}
                   </p>
                 </div>
               ) : (
@@ -805,7 +871,7 @@ export default function App() {
                     {/* Badge top status */}
                     <div className="flex items-center justify-between text-[10px] mb-1.5 font-mono font-bold">
                       <span className="text-slate-400">
-                        {new Date(match.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} • 2026
+                        {new Date(match.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(match.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
                       </span>
                       {isLive ? (
                         <span className="px-1.5 py-0.5 rounded bg-red-600 text-white font-extrabold uppercase animate-pulse flex items-center gap-1 text-[9px]">
@@ -826,8 +892,8 @@ export default function App() {
                     <div className="flex items-center justify-between py-1 bg-slate-950/50 px-2 rounded-md gap-1 border border-slate-900/50">
                       {/* Home */}
                       <div className="flex items-center gap-1.5 w-5/12">
-                        <span className="text-xl shrink-0 filter drop-shadow-md select-none" title={match.homeTeam}>{match.homeFlag}</span>
-                        <span className="font-extrabold text-slate-100 text-xs md:text-sm truncate tracking-tight">{match.homeTeam}</span>
+                        {renderFlag(match.homeFlag, match.homeTeam)}
+                        <span className="font-extrabold text-slate-100 text-sm md:text-base truncate tracking-tight">{match.homeTeam}</span>
                       </div>
 
                       {/* Actual Score or Versus Text */}
@@ -849,8 +915,8 @@ export default function App() {
 
                       {/* Away */}
                       <div className="flex items-center justify-end gap-1.5 w-5/12 text-right">
-                        <span className="font-extrabold text-slate-100 text-xs md:text-sm truncate tracking-tight">{match.awayTeam}</span>
-                        <span className="text-xl shrink-0 filter drop-shadow-md select-none" title={match.awayTeam}>{match.awayFlag}</span>
+                        <span className="font-extrabold text-slate-100 text-sm md:text-base truncate tracking-tight">{match.awayTeam}</span>
+                        {renderFlag(match.awayFlag, match.awayTeam)}
                       </div>
                     </div>
 
@@ -1440,7 +1506,7 @@ export default function App() {
                   </button>
                   
                   <p className="text-[10px] text-slate-500 text-center font-mono mt-1">
-                    *Dica: use "admin" ou "1234" para testar
+                    *Senha: "visualcopa2026"
                   </p>
                 </div>
               </motion.div>
@@ -1538,7 +1604,11 @@ export default function App() {
                   type="button"
                   className={`px-3 py-2.5 rounded-xl border font-bold text-xs shrink-0 flex items-center gap-2 transition ${selectedMatchForGuess === m.id ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-700/20' : 'bg-slate-950/60 text-slate-400 border-slate-900 hover:bg-slate-900'}`}
                 >
-                  <span>{m.homeFlag} vs {m.awayFlag}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {renderFlag(m.homeFlag, m.homeTeam)}
+                    <span className="text-[10px] text-slate-500 font-normal mx-0.5">vs</span>
+                    {renderFlag(m.awayFlag, m.awayTeam)}
+                  </div>
                   <span className="text-[9px] font-mono bg-slate-900/60 px-1.5 py-0.5 rounded text-slate-300">
                     {m.homeTeam}
                   </span>
@@ -1566,15 +1636,17 @@ export default function App() {
                   <div className="bg-slate-950 p-4 rounded-xl border border-slate-900 flex flex-col items-center">
                     
                     {/* Match header details */}
-                    <div className="text-[10px] font-mono text-slate-500 uppercase tracking-widest mb-3">
-                      Copa do Mundo de 2026 • Grupo
+                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-3 text-center">
+                      {new Date(activeMatch.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })} às {new Date(activeMatch.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • 2026
                     </div>
 
                     {/* Numeric Input scoreboard score selection row */}
                     <div className="flex items-center justify-between w-full gap-2">
                       {/* Home team title */}
-                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300">
-                        <span className="text-3xl mb-1">{activeMatch.homeFlag}</span>
+                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
+                        <div className="w-10 h-7 flex items-center justify-center shrink-0">
+                          {renderFlag(activeMatch.homeFlag, activeMatch.homeTeam)}
+                        </div>
                         <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.homeTeam}</span>
                       </div>
 
@@ -1622,8 +1694,10 @@ export default function App() {
                       </div>
 
                       {/* Away team title */}
-                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300">
-                        <span className="text-3xl mb-1">{activeMatch.awayFlag}</span>
+                      <div className="flex flex-col items-center w-5/12 text-center text-slate-300 gap-1.5">
+                        <div className="w-10 h-7 flex items-center justify-center shrink-0">
+                          {renderFlag(activeMatch.awayFlag, activeMatch.awayTeam)}
+                        </div>
                         <span className="font-bold text-xs truncate max-w-[80px]">{activeMatch.awayTeam}</span>
                       </div>
                     </div>

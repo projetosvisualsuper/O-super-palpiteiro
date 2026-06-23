@@ -5,6 +5,10 @@ import { Match, Participant, Guess, AppState } from "./src/types";
 import { INITIAL_MATCHES, INITIAL_PARTICIPANTS, INITIAL_GUESSES, INITIAL_RULES } from "./src/data";
 import { calculateGuessPoints } from "./src/utils";
 import { loadAppState, saveAppState } from "./src/db/firebase";
+import dotenv from "dotenv";
+import { GoogleGenAI } from "@google/genai";
+
+dotenv.config();
 
 // In-memory state
 let state: AppState = {
@@ -279,31 +283,102 @@ export async function createApp() {
     res.json({ success: true, state });
   });
 
-  // Admin: Sync with real World Cup 2026 matches using the hand-crafted official schedule (FIFA-approved)
+  // Admin: Sync with real World Cup 2026 matches using Gemini API (Google Search Grounding)
   app.post("/api/admin/sync-real-matches", async (req, res) => {
     await getLatestState();
     try {
-      console.log("[Server] Synchronizing state to correct FIFA 2026 World Cup match sequence...");
+      console.log("[Server] Synchronizing state with real-world 2026 World Cup matches using Gemini...");
       
-      state.matches = [...INITIAL_MATCHES];
-      // Keep guesses but reset those that do not map to our clean matchIds
-      state.guesses = (state.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-      // Reset leaderboard to new recalculated ones
-      state.participants = [...INITIAL_PARTICIPANTS];
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey || apiKey === "Sua_Chave_Gemini_Aqui" || apiKey.trim() === "") {
+        console.warn("[Server] GEMINI_API_KEY is not configured or is placeholder. Using fallback INITIAL_MATCHES.");
+        state.matches = [...INITIAL_MATCHES];
+        // Keep guesses but reset those that do not map to our clean matchIds
+        state.guesses = (state.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        recalculateLeaderboard();
+        await saveAppState(state);
+        return res.json({ 
+          success: true, 
+          count: INITIAL_MATCHES.length, 
+          isFallback: true, 
+          state 
+        });
+      }
+
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Today's date is June 23, 2026. Query the official FIFA World Cup 2026 matches and scores page at "https://www.fifa.com/pt/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=BR&wtw-filter=ALL" to find the latest real-world 2026 FIFA World Cup matches (completed, live, and upcoming schedule). 
+        Return the list of matches as a JSON array of objects fitting this structure:
+        {
+          "id": string, // format like "m_real_1", "m_real_2", etc.
+          "homeTeam": string, // Name in Portuguese (e.g., "Brasil", "Alemanha", "Estados Unidos")
+          "awayTeam": string, // Name in Portuguese
+          "homeFlag": string, // Emoji flag
+          "awayFlag": string, // Emoji flag
+          "homeScore": number | null, // score if finished/live, null if scheduled
+          "awayScore": number | null, // score if finished/live, null if scheduled
+          "status": "scheduled" | "live" | "finished",
+          "dateTime": string // ISO 8601 string, e.g. "2026-06-11T16:00:00Z"
+        }
+        Provide at least 15-20 matches showing the progression of the tournament starting from June 20, 2026 up to the current date (June 23, 2026) and upcoming matches in the next few days. Match team names must be in Portuguese (e.g. Alemanha instead of Germany, Holanda instead of Netherlands, Colômbia instead of Colombia).
+        Respond ONLY with the raw JSON array.`,
+        config: {
+          tools: [{ googleSearch: {} }],
+          responseMimeType: "application/json"
+        }
+      });
+
+      const text = response.text;
+      if (!text) {
+        throw new Error("Empty response from Gemini API");
+      }
+
+      console.log("[Server] Gemini raw response:", text);
+      const parsedMatches: Match[] = JSON.parse(text.trim());
+
+      if (!Array.isArray(parsedMatches) || parsedMatches.length === 0) {
+        throw new Error("Gemini response is not a valid non-empty array");
+      }
+
+      // Basic validation of fields
+      for (const m of parsedMatches) {
+        if (!m.id || !m.homeTeam || !m.awayTeam || !m.dateTime || !m.status) {
+          throw new Error("Match objects returned from Gemini are missing mandatory fields");
+        }
+      }
+
+      state.matches = parsedMatches;
+      // Keep guesses but reset those that do not map to the synced matchIds
+      state.guesses = (state.guesses || []).filter(g => state.matches.some(sm => sm.id === g.matchId));
       
       recalculateLeaderboard();
       await saveAppState(state);
-      
-      console.log(`[Server] Automatically synced 13 matches successfully with official calendar!`);
+
+      console.log(`[Server] Successfully synced ${state.matches.length} matches using Gemini Search Grounding.`);
       return res.json({ 
         success: true, 
-        count: INITIAL_MATCHES.length, 
-        isFallback: true, 
+        count: state.matches.length, 
+        isFallback: false, 
         state 
       });
+
     } catch (error) {
-      console.error("[Server] Error synchronizing official matches:", error);
-      res.status(500).json({ error: "Erro ao sincronizar com calendário oficial" });
+      console.error("[Server] Error synchronizing with Gemini search:", error);
+      // Fallback
+      console.log("[Server] Falling back to official local initial matches...");
+      state.matches = [...INITIAL_MATCHES];
+      state.guesses = (state.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+      recalculateLeaderboard();
+      await saveAppState(state).catch(() => {});
+      
+      res.json({
+        success: true,
+        count: INITIAL_MATCHES.length,
+        isFallback: true,
+        state,
+        warning: "Gemini Sync failed; reverted to fallback schedule: " + (error instanceof Error ? error.message : String(error))
+      });
     }
   });
 
