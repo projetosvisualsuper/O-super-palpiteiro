@@ -270,6 +270,7 @@ export async function createApp() {
 
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on guess:", err));
+    res.json({ success: true, state: getCleanState(state) });
   });
 
   // Login a participant (validates existing PIN)
