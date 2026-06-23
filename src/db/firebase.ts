@@ -58,8 +58,7 @@ const DOCUMENT_ID = "app_state";
  */
 export async function loadAppState(): Promise<AppState | null> {
   if (!firebaseInitialized || !db) {
-    console.log("[Firebase] Not initialized. Skipping database load.");
-    return null;
+    throw new Error("Firebase not initialized");
   }
 
   try {
@@ -75,7 +74,7 @@ export async function loadAppState(): Promise<AppState | null> {
     }
   } catch (error) {
     console.error("[Firebase] Error loading state:", error);
-    return null;
+    throw error;
   }
 }
 
