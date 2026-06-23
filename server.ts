@@ -227,20 +227,18 @@ export async function createApp() {
     // Check if user already has a guess on this match
     let existingGuess = state.guesses.find(g => g.matchId === matchId && g.participantName.toLowerCase() === trimmedName.toLowerCase());
     if (existingGuess) {
-      existingGuess.homeScore = parseInt(homeScore);
-      existingGuess.awayScore = parseInt(awayScore);
-      existingGuess.submittedAt = new Date().toISOString();
-    } else {
-      const newGuess: Guess = {
-        id: 'g_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        matchId,
-        participantName: trimmedName,
-        homeScore: parseInt(homeScore),
-        awayScore: parseInt(awayScore),
-        submittedAt: new Date().toISOString()
-      };
-      state.guesses.push(newGuess);
+      return res.status(400).json({ error: "Você já enviou um palpite para esta partida!" });
     }
+
+    const newGuess: Guess = {
+      id: 'g_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+      matchId,
+      participantName: trimmedName,
+      homeScore: parseInt(homeScore),
+      awayScore: parseInt(awayScore),
+      submittedAt: new Date().toISOString()
+    };
+    state.guesses.push(newGuess);
 
     recalculateLeaderboard();
     saveAppState(state).catch(err => console.error("[Firebase] Error updating state on guess:", err));
@@ -463,6 +461,21 @@ export async function createApp() {
     } catch (error) {
       console.error("[Server] Error during manual database reload:", error);
       res.status(500).json({ error: "Erro ao recarregar do banco de dados" });
+    }
+  });
+
+  // Admin: Clear all guesses and participants
+  app.post("/api/admin/clear-guesses", async (req, res) => {
+    await getLatestState();
+    state.participants = [];
+    state.guesses = [];
+    recalculateLeaderboard();
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on clear guesses:", err);
+      res.status(500).json({ error: "Erro ao salvar alteração no banco de dados" });
     }
   });
 

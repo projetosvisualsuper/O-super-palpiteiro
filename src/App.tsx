@@ -549,6 +549,24 @@ export default function App() {
     }
   };
 
+  // Admin: Clear all guesses and participants
+  const clearAllGuesses = async () => {
+    if (!window.confirm('Tem certeza que deseja excluir TODOS os participantes e palpites do banco de dados? Isso é definitivo!')) return;
+    try {
+      const res = await fetch('/api/admin/clear-guesses', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setAppState(data.state);
+        alert('Todos os palpites e participantes foram excluídos com sucesso!');
+      } else {
+        alert('Falha ao excluir palpites.');
+      }
+    } catch (err) {
+      console.error('Erro ao excluir palpites: ', err);
+      alert('Erro de conexão ao excluir palpites.');
+    }
+  };
+
   const handleAdminLogin = (password: string) => {
     const cleanPass = password.trim();
     if (cleanPass === 'visualcopa2026') {
@@ -1655,6 +1673,14 @@ export default function App() {
                     >
                       <RefreshCw className="w-4 h-4" />
                       Atualizar do Banco de Dados
+                    </button>
+
+                     <button
+                      onClick={clearAllGuesses}
+                      className="bg-red-650/80 hover:bg-red-600 text-white font-bold border border-red-500/20 px-3.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                      Excluir Todos os Palpites (Zerar Bolão)
                     </button>
 
                     <button
