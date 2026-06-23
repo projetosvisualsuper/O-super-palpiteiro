@@ -494,8 +494,8 @@ Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurat
 
 if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
   createApp().then(app => {
-    const PORT = 3000;
-    app.listen(PORT, "0.0.0.0", () => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
     });
   }).catch(err => {
