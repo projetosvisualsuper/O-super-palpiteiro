@@ -10,82 +10,188 @@ export const INITIAL_RULES: RulePointConfig = {
 
 export const INITIAL_MATCHES: Match[] = [
   {
-    id: 'm1',
-    homeTeam: 'Brasil',
-    awayTeam: 'Argentina',
-    homeFlag: '🇧🇷',
-    awayFlag: '🇦🇷',
-    homeScore: null,
-    awayScore: null,
-    status: 'scheduled',
-    dateTime: '2026-06-25T20:00:00Z',
-  },
-  {
-    id: 'm2',
-    homeTeam: 'Espanha',
-    awayTeam: 'Alemanha',
-    homeFlag: '🇪🇸',
-    awayFlag: '🇩🇪',
+    id: 'm_real_1',
+    homeTeam: 'México',
+    awayTeam: 'África do Sul',
+    homeFlag: '🇲🇽',
+    awayFlag: '🇿🇦',
     homeScore: 2,
     awayScore: 1,
     status: 'finished',
-    dateTime: '2026-06-18T18:00:00Z',
+    dateTime: '2026-06-11T16:00:00Z',
   },
   {
-    id: 'm3',
-    homeTeam: 'França',
-    awayTeam: 'Inglaterra',
-    homeFlag: '🇫🇷',
-    awayFlag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    id: 'm_real_2',
+    homeTeam: 'Estados Unidos',
+    awayTeam: 'Nova Zelândia',
+    homeFlag: '🇺🇸',
+    awayFlag: '🇳🇿',
+    homeScore: 3,
+    awayScore: 1,
+    status: 'finished',
+    dateTime: '2026-06-11T20:00:00Z',
+  },
+  {
+    id: 'm_real_3',
+    homeTeam: 'Canadá',
+    awayTeam: 'Argélia',
+    homeFlag: '🇨🇦',
+    awayFlag: '🇩🇿',
     homeScore: 1,
     awayScore: 1,
     status: 'finished',
-    dateTime: '2026-06-20T16:00:00Z',
+    dateTime: '2026-06-12T18:00:00Z',
   },
   {
-    id: 'm4',
+    id: 'm_real_4',
+    homeTeam: 'Alemanha',
+    awayTeam: 'Japão',
+    homeFlag: '🇩🇪',
+    awayFlag: '🇯🇵',
+    homeScore: 2,
+    awayScore: 0,
+    status: 'finished',
+    dateTime: '2026-06-15T15:00:00Z',
+  },
+  {
+    id: 'm_real_5',
+    homeTeam: 'Brasil',
+    awayTeam: 'Croácia',
+    homeFlag: '🇧🇷',
+    awayFlag: '🇭🇷',
+    homeScore: 3,
+    awayScore: 1,
+    status: 'finished',
+    dateTime: '2026-06-16T18:00:00Z',
+  },
+  {
+    id: 'm_real_6',
+    homeTeam: 'Argentina',
+    awayTeam: 'Polônia',
+    homeFlag: '🇦🇷',
+    awayFlag: '🇵🇱',
+    homeScore: 2,
+    awayScore: 1,
+    status: 'finished',
+    dateTime: '2026-06-18T19:00:00Z',
+  },
+  {
+    id: 'm_real_7',
+    homeTeam: 'França',
+    awayTeam: 'Coreia do Sul',
+    homeFlag: '🇫🇷',
+    awayFlag: '🇰🇷',
+    homeScore: 2,
+    awayScore: 2,
+    status: 'finished',
+    dateTime: '2026-06-20T17:00:00Z',
+  },
+  {
+    id: 'm_real_8',
+    homeTeam: 'Espanha',
+    awayTeam: 'Camarões',
+    homeFlag: '🇪🇸',
+    awayFlag: '🇨🇲',
+    homeScore: 1,
+    awayScore: 0,
+    status: 'finished',
+    dateTime: '2026-06-22T19:00:00Z',
+  },
+  {
+    id: 'm_real_9',
+    homeTeam: 'Brasil',
+    awayTeam: 'Inglaterra',
+    homeFlag: '🇧🇷',
+    awayFlag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-23T20:00:00Z',
+  },
+  {
+    id: 'm_real_10',
+    homeTeam: 'México',
+    awayTeam: 'Alemanha',
+    homeFlag: '🇲🇽',
+    awayFlag: '🇩🇪',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-24T18:00:00Z',
+  },
+  {
+    id: 'm_real_11',
+    homeTeam: 'Argentina',
+    awayTeam: 'Suécia',
+    homeFlag: '🇦🇷',
+    awayFlag: '🇸🇪',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-25T19:00:00Z',
+  },
+  {
+    id: 'm_real_12',
     homeTeam: 'Estados Unidos',
-    awayTeam: 'México',
+    awayTeam: 'Uruguai',
     homeFlag: '🇺🇸',
-    awayFlag: '🇲🇽',
+    awayFlag: '🇺🇾',
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
     dateTime: '2026-06-26T21:00:00Z',
   },
   {
-    id: 'm5',
+    id: 'm_real_13',
     homeTeam: 'Portugal',
-    awayTeam: 'Itália',
+    awayTeam: 'Holanda',
     homeFlag: '🇵🇹',
-    awayFlag: '🇮🇹',
+    awayFlag: '🇳🇱',
     homeScore: null,
     awayScore: null,
     status: 'scheduled',
-    dateTime: '2026-06-28T19:00:00Z',
+    dateTime: '2026-06-27T19:00:00Z',
+  },
+  {
+    id: 'm_real_14',
+    homeTeam: 'Itália',
+    awayTeam: 'Espanha',
+    homeFlag: '🇮🇹',
+    awayFlag: '🇪🇸',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-28T18:00:00Z',
   }
 ];
 
 export const INITIAL_PARTICIPANTS: Participant[] = [
-  { id: 'p1', name: 'Casimiro', points: 27, exactScores: 2, correctWinners: 1, lastGuessTime: '2026-06-21T18:30:00Z', avatarColor: '#EAB308' }, // cazetv yellow
-  { id: 'p2', name: 'Luisinho', points: 22, exactScores: 1, correctWinners: 2, lastGuessTime: '2026-06-21T18:35:00Z', avatarColor: '#3B82F6' },
-  { id: 'p3', name: 'Beltrão', points: 19, exactScores: 1, correctWinners: 1, lastGuessTime: '2026-06-21T18:40:00Z', avatarColor: '#EF4444' },
-  { id: 'p4', name: 'Guilherme', points: 12, exactScores: 0, correctWinners: 2, lastGuessTime: '2026-06-21T18:41:00Z', avatarColor: '#10B981' },
-  { id: 'p5', name: 'Defante', points: 4, exactScores: 0, correctWinners: 0, lastGuessTime: '2026-06-21T18:50:00Z', avatarColor: '#8B5CF6' }
+  { id: 'p1', name: 'Casimiro', points: 30, exactScores: 3, correctWinners: 0, lastGuessTime: '2026-06-22T18:30:00Z', avatarColor: '#EAB308' },
+  { id: 'p2', name: 'Luisinho', points: 22, exactScores: 1, correctWinners: 2, lastGuessTime: '2026-06-22T18:35:00Z', avatarColor: '#3B82F6' },
+  { id: 'p3', name: 'Beltrão', points: 17, exactScores: 1, correctWinners: 1, lastGuessTime: '2026-06-22T18:40:00Z', avatarColor: '#EF4444' },
+  { id: 'p4', name: 'Guilherme', points: 15, exactScores: 1, correctWinners: 1, lastGuessTime: '2026-06-22T18:41:00Z', avatarColor: '#10B981' },
+  { id: 'p5', name: 'Defante', points: 10, exactScores: 1, correctWinners: 0, lastGuessTime: '2026-06-22T18:50:00Z', avatarColor: '#8B5CF6' }
 ];
 
 export const INITIAL_GUESSES: Guess[] = [
-  // Guesses for match 2 (Espanha 2 - 1 Alemanha)
-  { id: 'g1', matchId: 'm2', participantName: 'Casimiro', homeScore: 2, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-18T17:00:00Z' }, // Exact score: 10 pts
-  { id: 'g2', matchId: 'm2', participantName: 'Luisinho', homeScore: 3, awayScore: 2, pointsEarned: 7, submittedAt: '2026-06-18T17:15:00Z' }, // Winner + Diff (+1): 7 pts
-  { id: 'g3', matchId: 'm2', participantName: 'Beltrão', homeScore: 1, awayScore: 0, pointsEarned: 7, submittedAt: '2026-06-18T17:20:00Z' },  // Winner + Diff (+1): 7 pts
-  { id: 'g4', matchId: 'm2', participantName: 'Guilherme', homeScore: 2, awayScore: 0, pointsEarned: 5, submittedAt: '2026-06-18T17:25:00Z' },// Winner only: 5 pts
-  { id: 'g5', matchId: 'm2', participantName: 'Defante', homeScore: 0, awayScore: 3, pointsEarned: 2, submittedAt: '2026-06-18T17:30:00Z' },   // One team goals (Alemanha 3, España got 2 so none match? Wait, Alemanha got 1 real gaol but guessed 3. Espanha got 2, guessed 0. Correct goals: 0. Wait, Defante got 2 pts because maybe there is one team goals or just 0)
-  
-  // Guesses for match 3 (França 1 - 1 Inglaterra)
-  { id: 'g6', matchId: 'm3', participantName: 'Casimiro', homeScore: 1, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-20T15:00:00Z' }, // Exact score: 10 pts
-  { id: 'g7', matchId: 'm3', participantName: 'Luisinho', homeScore: 1, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-20T15:05:00Z' }, // Exact score: 10 pts
-  { id: 'g8', matchId: 'm3', participantName: 'Beltrão', homeScore: 2, awayScore: 2, pointsEarned: 7, submittedAt: '2026-06-20T15:10:00Z' },  // Winner (Draw) + Diff (0): 7 pts
-  { id: 'g9', matchId: 'm3', participantName: 'Guilherme', homeScore: 0, awayScore: 0, pointsEarned: 7, submittedAt: '2026-06-20T15:15:00Z' },// Winner (Draw) + Diff (0): 7 pts  
-  { id: 'g10', matchId: 'm3', participantName: 'Defante', homeScore: 2, awayScore: 1, pointsEarned: 2, submittedAt: '2026-06-20T15:20:00Z' }, // França got 1 guessed 2. England got 1 guessed 1. This matches England score of 1! So 2 pts.
+  // México 2 - 1 África do Sul (m_real_1)
+  { id: 'g1', matchId: 'm_real_1', participantName: 'Casimiro', homeScore: 2, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-11T15:00:00Z' },
+  { id: 'g2', matchId: 'm_real_1', participantName: 'Luisinho', homeScore: 3, awayScore: 2, pointsEarned: 7, submittedAt: '2026-06-11T15:15:00Z' },
+  { id: 'g3', matchId: 'm_real_1', participantName: 'Beltrão', homeScore: 1, awayScore: 0, pointsEarned: 7, submittedAt: '2026-06-11T15:20:00Z' },
+  { id: 'g4', matchId: 'm_real_1', participantName: 'Guilherme', homeScore: 2, awayScore: 0, pointsEarned: 5, submittedAt: '2026-06-11T15:25:00Z' },
+  { id: 'g5', matchId: 'm_real_1', participantName: 'Defante', homeScore: 0, awayScore: 2, pointsEarned: 0, submittedAt: '2026-06-11T15:30:00Z' },
+
+  // Estados Unidos 3 - 1 Nova Zelândia (m_real_2)
+  { id: 'g6', matchId: 'm_real_2', participantName: 'Casimiro', homeScore: 3, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-11T19:00:00Z' },
+  { id: 'g7', matchId: 'm_real_2', participantName: 'Luisinho', homeScore: 2, awayScore: 1, pointsEarned: 5, submittedAt: '2026-06-11T19:05:00Z' },
+  { id: 'g8', matchId: 'm_real_2', participantName: 'Beltrão', homeScore: 2, awayScore: 0, pointsEarned: 5, submittedAt: '2026-06-11T19:10:00Z' },
+  { id: 'g9', matchId: 'm_real_2', participantName: 'Guilherme', homeScore: 3, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-11T19:15:00Z' },
+  { id: 'g10', matchId: 'm_real_2', participantName: 'Defante', homeScore: 1, awayScore: 1, pointsEarned: 0, submittedAt: '2026-06-11T19:20:00Z' },
+
+  // Brasil 3 - 1 Croácia (m_real_5)
+  { id: 'g11', matchId: 'm_real_5', participantName: 'Casimiro', homeScore: 3, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-16T15:00:00Z' },
+  { id: 'g12', matchId: 'm_real_5', participantName: 'Luisinho', homeScore: 2, awayScore: 1, pointsEarned: 5, submittedAt: '2026-06-16T15:05:00Z' },
+  { id: 'g13', matchId: 'm_real_5', participantName: 'Beltrão', homeScore: 3, awayScore: 0, pointsEarned: 5, submittedAt: '2026-06-16T15:10:00Z' },
+  { id: 'g14', matchId: 'm_real_5', participantName: 'Guilherme', homeScore: 1, awayScore: 2, pointsEarned: 0, submittedAt: '2026-06-16T15:15:00Z' },
+  { id: 'g15', matchId: 'm_real_5', participantName: 'Defante', homeScore: 3, awayScore: 1, pointsEarned: 10, submittedAt: '2026-06-16T15:20:00Z' },
 ];

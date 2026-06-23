@@ -84,7 +84,20 @@ async function getLatestState(): Promise<AppState> {
   try {
     const loaded = await loadAppState();
     if (loaded) {
-      state = loaded;
+      // Check if loaded state contains old matches and needs an upgrade
+      const hasOldMatches = loaded.matches.some(m => m.id === 'm1' || m.id === 'm2' || m.id.startsWith('m_fallback'));
+      if (hasOldMatches) {
+        console.log("[Server] Old matches detected on request. Upgrading to real-world 2026 World Cup matches in Firestore...");
+        loaded.matches = [...INITIAL_MATCHES];
+        // Keep participants and guesses but reset guesses for matches that no longer exist
+        loaded.guesses = loaded.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        // Recalculate leaderboard
+        state = loaded;
+        recalculateLeaderboard();
+        await saveAppState(state);
+      } else {
+        state = loaded;
+      }
     }
   } catch (e) {
     console.error("[Firebase] Error fetching latest state inside request:", e);
@@ -102,7 +115,19 @@ export async function createApp() {
   try {
     const loadedState = await loadAppState();
     if (loadedState) {
-      state = loadedState;
+      // Check if loaded state contains old matches and needs an upgrade
+      const hasOldMatches = loadedState.matches.some(m => m.id === 'm1' || m.id === 'm2' || m.id.startsWith('m_fallback'));
+      if (hasOldMatches) {
+        console.log("[Server] Old matches detected on boot. Upgrading to real-world 2026 World Cup matches in Firestore...");
+        loadedState.matches = [...INITIAL_MATCHES];
+        // Keep participants and guesses but reset guesses for matches that no longer exist
+        loadedState.guesses = loadedState.guesses.filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
+        state = loadedState;
+        recalculateLeaderboard();
+        await saveAppState(state);
+      } else {
+        state = loadedState;
+      }
       console.log("[Server] State loaded from Firestore database successfully.");
     } else {
       console.log("[Server] No state found in Firestore. Saving current default state.");
@@ -315,92 +340,12 @@ Provide at least 6-8 real match records of the 2026 World Cup. Be highly accurat
     } catch (error) {
       console.warn("[Server] Using highly realistic real-world 2026 World Cup match fallback due to error:", error);
       
-      const fallbackMatches: Match[] = [
-        {
-          id: 'm_fallback_1',
-          homeTeam: 'México',
-          awayTeam: 'África do Sul',
-          homeFlag: '🇲🇽',
-          awayFlag: '🇿🇦',
-          homeScore: 2,
-          awayScore: 0,
-          status: 'finished',
-          dateTime: '2026-06-11T16:00:00Z',
-        },
-        {
-          id: 'm_fallback_2',
-          homeTeam: 'Estados Unidos',
-          awayTeam: 'Nova Zelândia',
-          homeFlag: '🇺🇸',
-          awayFlag: '🇳🇿',
-          homeScore: 3,
-          awayScore: 1,
-          status: 'finished',
-          dateTime: '2026-06-11T20:00:00Z',
-        },
-        {
-          id: 'm_fallback_3',
-          homeTeam: 'Canadá',
-          awayTeam: 'Argélia',
-          homeFlag: '🇨🇦',
-          awayFlag: '🇩🇿',
-          homeScore: 1,
-          awayScore: 1,
-          status: 'finished',
-          dateTime: '2026-06-12T18:00:00Z',
-        },
-        {
-          id: 'm_fallback_4',
-          homeTeam: 'Brasil',
-          awayTeam: 'Ucrânia',
-          homeFlag: '🇧🇷',
-          awayFlag: '🇺🇦',
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-          dateTime: '2026-06-25T20:00:00Z',
-        },
-        {
-          id: 'm_fallback_5',
-          homeTeam: 'França',
-          awayTeam: 'Coreia do Sul',
-          homeFlag: '🇫🇷',
-          awayFlag: '🇰🇷',
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-          dateTime: '2026-06-26T15:00:00Z',
-        },
-        {
-          id: 'm_fallback_6',
-          homeTeam: 'Argentina',
-          awayTeam: 'Suécia',
-          homeFlag: '🇦🇷',
-          awayFlag: '🇸🇪',
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-          dateTime: '2026-06-27T18:00:00Z',
-        },
-        {
-          id: 'm_fallback_7',
-          homeTeam: 'Espanha',
-          awayTeam: 'Camarões',
-          homeFlag: '🇪🇸',
-          awayFlag: '🇨🇲',
-          homeScore: null,
-          awayScore: null,
-          status: 'scheduled',
-          dateTime: '2026-06-28T19:00:00Z',
-        }
-      ];
-
-      state.matches = fallbackMatches;
+      state.matches = [...INITIAL_MATCHES];
       recalculateLeaderboard();
       await saveAppState(state);
       res.json({ 
         success: true, 
-        count: fallbackMatches.length, 
+        count: INITIAL_MATCHES.length, 
         isFallback: true, 
         state
       });
