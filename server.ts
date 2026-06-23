@@ -122,11 +122,23 @@ async function getLatestState(forceRefresh = false): Promise<AppState> {
         
         if (needsUpgrade) {
           console.log("[Server] Differences detected on request. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-          loaded.matches = [...INITIAL_MATCHES];
-          // Keep participants and guesses but reset guesses for matches that no longer exist
+          const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
+            const existing = (loaded.matches || []).find(m => m.id === initialMatch.id);
+            if (existing) {
+              return {
+                ...initialMatch,
+                homeScore: existing.homeScore,
+                awayScore: existing.awayScore,
+                status: existing.status
+              };
+            }
+            return initialMatch;
+          });
+          loaded.matches = updatedMatches;
+          // Keep participants
+          loaded.participants = loaded.participants || [];
+          // Keep guesses but reset guesses for matches that no longer exist
           loaded.guesses = (loaded.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-          // Reset old static points to new recalculated ones
-          loaded.participants = [...INITIAL_PARTICIPANTS];
           // Recalculate leaderboard
           state = loaded;
           recalculateLeaderboard();
@@ -164,11 +176,23 @@ export async function createApp() {
 
       if (needsUpgrade) {
         console.log("[Server] Differences detected on boot. Upgrading layout to real-world 2026 World Cup matches in Firestore...");
-        loadedState.matches = [...INITIAL_MATCHES];
-        // Keep participants and guesses but reset guesses for matches that no longer exist
+        const updatedMatches = INITIAL_MATCHES.map(initialMatch => {
+          const existing = (loadedState.matches || []).find(m => m.id === initialMatch.id);
+          if (existing) {
+            return {
+              ...initialMatch,
+              homeScore: existing.homeScore,
+              awayScore: existing.awayScore,
+              status: existing.status
+            };
+          }
+          return initialMatch;
+        });
+        loadedState.matches = updatedMatches;
+        // Keep participants
+        loadedState.participants = loadedState.participants || [];
+        // Keep guesses but reset guesses for matches that no longer exist
         loadedState.guesses = (loadedState.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-        // Reset old static points to new recalculated ones
-        loadedState.participants = [...INITIAL_PARTICIPANTS];
         state = loadedState;
         recalculateLeaderboard();
         await saveAppState(state);
