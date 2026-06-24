@@ -122,6 +122,8 @@ export default function App() {
     matchHome: string; matchAway: string; homeFlag: string; awayFlag: string;
     homeScore: number; awayScore: number;
   } | null>(null);
+  const [mobileTab, setMobileTab] = useState<'submit_guess' | 'my_guesses'>('submit_guess');
+  const [selectedCorrectGuess, setSelectedCorrectGuess] = useState<Guess | null>(null);
 
   useEffect(() => {
     const savedName = localStorage.getItem('mobile_user_name');
@@ -2250,10 +2252,38 @@ export default function App() {
           <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-emerald-950/40 p-4.5 shadow-xl relative">
             <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-yellow-500 to-green-500 rounded-t-2xl" />
             
-            <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
-              <Flame className="w-4 h-4 text-yellow-500" />
-              2. Selecione e Dê seu Palpite!
-            </h2>
+            {/* NEW MOBILE TAB SELECTOR */}
+            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-slate-950 rounded-xl border border-slate-850">
+              <button
+                type="button"
+                onClick={() => setMobileTab('submit_guess')}
+                className={`py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  mobileTab === 'submit_guess'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                ⚽ Palpitar
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('my_guesses')}
+                className={`py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  mobileTab === 'my_guesses'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📊 Meus Palpites
+              </button>
+            </div>
+
+            {mobileTab === 'submit_guess' ? (
+              <>
+                <h2 className="text-xs font-bold tracking-widest text-slate-300 uppercase mb-3.5 flex items-center gap-1.5">
+                  <Flame className="w-4 h-4 text-yellow-500" />
+                  2. Selecione e Dê seu Palpite!
+                </h2>
 
             {/* Matches Horizontal Scroll Selection Carousel */}
             <div className="flex gap-2 overflow-x-auto pb-3.5 mb-4 scrollbar-none">
@@ -2400,7 +2430,139 @@ export default function App() {
                 );
               })()
             )}
+          </>
+        ) : (
+          // Tab My Guesses & Ranking List
+          <div className="space-y-4">
+            {/* Ranking status summary card */}
+            {(() => {
+              const userRankIndex = appState?.participants.findIndex(p => p.name.toLowerCase() === mobileName.toLowerCase()) ?? -1;
+              const userRank = userRankIndex !== -1 ? userRankIndex + 1 : null;
+              const userPoints = userRankIndex !== -1 ? appState?.participants[userRankIndex].points : 0;
+              
+              return (
+                <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-900 flex justify-between items-center text-left">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-mono tracking-widest">Minha Classificação</p>
+                    <h3 className="text-base font-black text-white mt-0.5">
+                      {userRank ? `${userRank}º Lugar` : 'Sem classificação'}
+                    </h3>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-500 uppercase font-mono tracking-widest">Pontos Acumulados</p>
+                    <h3 className="text-base font-black text-emerald-400 mt-0.5">
+                      {userPoints} <span className="text-xs font-normal text-slate-400">pts</span>
+                    </h3>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <h3 className="text-xs font-bold tracking-wider text-slate-350 uppercase mb-1 flex items-center gap-1.5 text-left">
+              <Trophy className="w-4 h-4 text-emerald-450" />
+              Grade de Palpites Realizados
+            </h3>
+
+            {/* Guesses list */}
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+              {(() => {
+                const myGuesses = (appState?.guesses || []).filter(g => g.participantName.toLowerCase() === mobileName.toLowerCase());
+                if (myGuesses.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-slate-500 text-xs font-medium">
+                      Nenhum palpite enviado ainda! Vá na aba "Palpitar" para começar.
+                    </div>
+                  );
+                }
+
+                return myGuesses.map(g => {
+                  const match = appState?.matches.find(m => m.id === g.matchId);
+                  if (!match) return null;
+
+                  const isFinished = match.status === 'finished';
+                  const isCorrect = isFinished && g.pointsEarned !== null && g.pointsEarned > 0;
+
+                  return (
+                    <div
+                      key={g.id}
+                      onClick={() => {
+                        if (isCorrect) {
+                          setSelectedCorrectGuess(g);
+                        }
+                      }}
+                      className={`p-3.5 rounded-xl border text-left transition-all duration-150 ${
+                        isCorrect 
+                          ? 'bg-slate-900/80 border-emerald-500/40 hover:border-emerald-500 cursor-pointer shadow-md shadow-emerald-950/10' 
+                          : isFinished
+                          ? 'bg-slate-900/40 border-slate-850 opacity-80'
+                          : 'bg-slate-900/60 border-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono mb-2">
+                        <span>
+                          {new Date(match.dateTime).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'America/Sao_Paulo' })} às {new Date(match.dateTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
+                        </span>
+                        {isFinished ? (
+                          isCorrect ? (
+                            <span className="bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 text-[9px]">
+                              🔥 ACERTO (+{g.pointsEarned} pts)
+                            </span>
+                          ) : (
+                            <span className="bg-red-950/60 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 text-[9px]">
+                              😢 ERRO (0 pts)
+                            </span>
+                          )
+                        ) : (
+                          <span className="bg-slate-950 text-slate-400 border border-slate-850 px-2 py-0.5 rounded-md font-bold flex items-center gap-1 text-[9px]">
+                            ⏳ PENDENTE
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        {/* Home Team */}
+                        <div className="flex items-center gap-2 w-5/12">
+                          {renderFlag(match.homeFlag, match.homeTeam)}
+                          <span className="font-bold text-xs text-slate-200 truncate">{match.homeTeam}</span>
+                        </div>
+
+                        {/* Versus / Score */}
+                        <div className="w-2/12 text-center">
+                          {isFinished ? (
+                            <div className="text-[10px] font-black font-mono text-emerald-400">
+                              {match.homeScore} - {match.awayScore}
+                            </div>
+                          ) : (
+                            <span className="text-[9px] font-mono text-slate-655 uppercase font-bold">vs</span>
+                          )}
+                        </div>
+
+                        {/* Away Team */}
+                        <div className="flex items-center justify-end gap-2 w-5/12 text-right">
+                          <span className="font-bold text-xs text-slate-200 truncate">{match.awayTeam}</span>
+                          {renderFlag(match.awayFlag, match.awayTeam)}
+                        </div>
+                      </div>
+
+                      {/* Guess details row */}
+                      <div className="mt-3 pt-2.5 border-t border-slate-950 flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400 font-medium">
+                          Seu Palpite: <strong className="text-white font-black font-mono">{g.homeScore} x {g.awayScore}</strong>
+                        </span>
+                        {isCorrect && (
+                          <span className="text-emerald-400 font-extrabold text-[9px] flex items-center gap-0.5 hover:underline uppercase tracking-wide">
+                            Compartilhar vitória ✨
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
+        )}
+      </div>
         )}
       </div>
 
@@ -2644,6 +2806,320 @@ export default function App() {
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* CORRECT GUESS VICTORY SHARE MODAL */}
+      <AnimatePresence>
+        {selectedCorrectGuess && (() => {
+          const match = appState?.matches.find(m => m.id === selectedCorrectGuess.matchId);
+          if (!match) return null;
+
+          const userRankIndex = appState?.participants.findIndex(p => p.name.toLowerCase() === mobileName.toLowerCase()) ?? -1;
+          const userRank = userRankIndex !== -1 ? userRankIndex + 1 : null;
+          const userPoints = userRankIndex !== -1 ? appState?.participants[userRankIndex].points : 0;
+
+          // Helper to download the canvas PNG
+          const handleDownloadCard = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1080;
+            canvas.height = 1920;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            // Gradient background
+            const grad = ctx.createLinearGradient(0, 0, 0, 1920);
+            grad.addColorStop(0, '#022c16'); // Emerald 950
+            grad.addColorStop(0.5, '#020617'); // Slate 950
+            grad.addColorStop(1, '#022c16');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 1080, 1920);
+
+            // Glowing circles
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.08)';
+            ctx.beginPath();
+            ctx.arc(540, 400, 350, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.04)';
+            ctx.beginPath();
+            ctx.arc(540, 1500, 450, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Card borders
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.25)';
+            ctx.lineWidth = 14;
+            ctx.strokeRect(40, 40, 1000, 1840);
+            ctx.strokeStyle = 'rgba(234, 179, 8, 0.45)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(60, 60, 960, 1800);
+
+            // Title
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 36px sans-serif';
+            ctx.fillText((appState?.championshipName || 'COPA DO MUNDO DE 2026').toUpperCase(), 540, 220);
+
+            // Accent Victory Header
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 90px sans-serif';
+            ctx.fillText('FUI CERTEIRO! 🎯🔥', 540, 340);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '50px sans-serif';
+            ctx.fillText('Acertei em cheio o placar do jogo!', 540, 420);
+
+            // Scoreboard Box background
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+            ctx.lineWidth = 3;
+            // Draw round rectangle for Scoreboard
+            const rX = 140, rY = 500, rW = 800, rH = 430, rRadius = 24;
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(rX, rY, rW, rH, rRadius) : ctx.rect(rX, rY, rW, rH);
+            ctx.fill();
+            ctx.stroke();
+
+            // Guessed placar banner
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.3)';
+            ctx.lineWidth = 2;
+            const bX = 140, bY = 970, bW = 800, bH = 200, bRadius = 16;
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(bX, bY, bW, bH, bRadius) : ctx.rect(bX, bY, bW, bH);
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw GUESS texts
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 38px sans-serif';
+            ctx.fillText('MEU PALPITE DE PLACAR', 540, 1025);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 75px sans-serif';
+            ctx.fillText(`${selectedCorrectGuess.homeScore} x ${selectedCorrectGuess.awayScore}`, 540, 1120);
+
+            // Points gained
+            ctx.fillStyle = '#f59e0b';
+            ctx.font = 'bold 52px sans-serif';
+            ctx.fillText(`+${selectedCorrectGuess.pointsEarned} pontos conquistados! 🏆`, 540, 1250);
+
+            // Ranking details box
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+            ctx.strokeStyle = 'rgba(234, 179, 8, 0.2)';
+            ctx.lineWidth = 2;
+            const kX = 140, kY = 1330, kW = 800, kH = 250, kRadius = 20;
+            ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(kX, kY, kW, kH, kRadius) : ctx.rect(kX, kY, kW, kH);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'bold 34px sans-serif';
+            ctx.fillText('MINHA CLASSIFICAÇÃO ATUAL NO GRUPO', 540, 1385);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 64px sans-serif';
+            const rStr = userRank ? `${userRank}º Lugar` : 'Classificado';
+            ctx.fillText(`${rStr} | ${userPoints} pts`, 540, 1475);
+            
+            ctx.fillStyle = '#a8a29e';
+            ctx.font = '34px sans-serif';
+            ctx.fillText(`Participante: ${selectedCorrectGuess.participantName.toUpperCase()}`, 540, 1540);
+
+            // Brand Footer
+            ctx.fillStyle = '#64748b';
+            ctx.font = 'bold 32px sans-serif';
+            ctx.fillText('Palpite feito através de O SUPER PALPITEIRO 🏆', 540, 1690);
+            ctx.font = '28px sans-serif';
+            ctx.fillText('Junte-se a nós escaneando a tela na TV!', 540, 1735);
+
+            // Load country flags asynchronously
+            const flagHomeUrl = getFlagImgUrl(match.homeFlag, match.homeTeam).replace('/w40/', '/w160/');
+            const flagAwayUrl = getFlagImgUrl(match.awayFlag, match.awayTeam).replace('/w40/', '/w160/');
+
+            const drawMatchDetails = () => {
+              // Write Team names
+              ctx.fillStyle = '#ffffff';
+              ctx.font = 'bold 44px sans-serif';
+              ctx.fillText(match.homeTeam.toUpperCase(), 290, 780);
+              ctx.fillText(match.awayTeam.toUpperCase(), 790, 780);
+
+              // Write Match Score
+              ctx.fillStyle = '#ea580c';
+              ctx.font = 'bold 125px sans-serif';
+              ctx.fillText(`${match.homeScore} x ${match.awayScore}`, 540, 725);
+              ctx.fillStyle = '#475569';
+              ctx.font = 'bold 28px sans-serif';
+              ctx.fillText('PLACAR DO JOGO', 540, 800);
+
+              // Save PNG and download
+              const dataUrl = canvas.toDataURL('image/png');
+              const a = document.createElement('a');
+              a.download = `Vitoria_${selectedCorrectGuess.participantName}_${match.homeTeam}_vs_${match.awayTeam}.png`;
+              a.href = dataUrl;
+              a.click();
+            };
+
+            // Load flag images and draw them, then proceed to scoreboard rendering
+            const loadFlag = (url: string, fx: number, fy: number, fw: number, fh: number) => {
+              return new Promise<void>((res) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.src = url;
+                img.onload = () => {
+                  ctx.save();
+                  // Rounded clip path for flag
+                  ctx.beginPath();
+                  ctx.roundRect ? ctx.roundRect(fx, fy, fw, fh, 12) : ctx.rect(fx, fy, fw, fh);
+                  ctx.closePath();
+                  ctx.clip();
+                  ctx.drawImage(img, fx, fy, fw, fh);
+                  ctx.restore();
+                  res();
+                };
+                img.onerror = () => {
+                  // Fallback: draw emoji if image fails
+                  ctx.font = '100px sans-serif';
+                  ctx.fillText(fx < 540 ? match.homeFlag : match.awayFlag, fx + fw/2, fy + fh/2 + 25);
+                  res();
+                };
+              });
+            };
+
+            Promise.all([
+              loadFlag(flagHomeUrl, 210, 560, 160, 110),
+              loadFlag(flagAwayUrl, 710, 560, 160, 110)
+            ]).then(() => {
+              drawMatchDetails();
+            });
+          };
+
+          const handleCopyText = () => {
+            const shareText = `🔥 ACERTEI EM CHEIO! 🎯\nFui certeiro no palpite do jogo ${match.homeTeam} ${match.homeScore} x ${match.awayScore} ${match.awayTeam}!\n\n🏆 Minha Classificação: ${userRank ? `${userRank}º Lugar` : 'Classificado'} com ${userPoints} pontos!\n\nParticipe você também do bolão de O Super Palpiteiro! ⚽🏆`;
+            navigator.clipboard.writeText(shareText).then(() => {
+              alert('Texto de vitória copiado com sucesso! Compartilhe no seu WhatsApp Status.');
+            });
+          };
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 text-slate-100"
+              style={{ background: 'radial-gradient(circle at 50% 50%, rgba(2,44,22,0.99) 0%, rgba(2,6,23,0.99) 100%)' }}
+              onClick={() => setSelectedCorrectGuess(null)}
+            >
+              {/* Confetti particles */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {['🏆','🔥','✨','🎉','🌟','⚽','🚀'].map((item, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ y: '110%', x: `${15 + i * 11}%`, opacity: 0 }}
+                    animate={{ y: '-10%', opacity: [0, 1, 1, 0], rotate: [0, 360] }}
+                    transition={{ duration: 3, delay: i * 0.15, repeat: Infinity, ease: 'easeOut' }}
+                    className="absolute text-2xl"
+                  >
+                    {item}
+                  </motion.div>
+                ))}
+              </div>
+
+              <motion.div
+                initial={{ scale: 0.8, y: 50, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.8, y: 50, opacity: 0 }}
+                className="relative w-full max-w-sm bg-slate-900 border border-emerald-500/40 rounded-3xl p-5 shadow-3xl text-center max-h-[92vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setSelectedCorrectGuess(null)}
+                  className="absolute top-3.5 right-3.5 bg-slate-800 hover:bg-slate-700 p-1.5 rounded-full text-slate-400 hover:text-white cursor-pointer transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="bg-emerald-950/60 p-3 rounded-full border border-emerald-500/20 w-16 h-16 flex items-center justify-center mx-auto mb-4 text-emerald-400">
+                  <Flame className="w-8 h-8 text-yellow-500 animate-bounce" />
+                </div>
+
+                <h3 className="font-display font-black text-lg uppercase text-yellow-400 tracking-tight">
+                  Palpite Certeiro! 🔥
+                </h3>
+                <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase mb-4">
+                  Garantido +{selectedCorrectGuess.pointsEarned} pontos
+                </p>
+
+                {/* Scoreboard visual */}
+                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 mb-4">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex flex-col items-center w-5/12">
+                      {renderFlag(match.homeFlag, match.homeTeam)}
+                      <span className="text-[11px] font-bold text-slate-300 mt-1 truncate max-w-[80px]">{match.homeTeam}</span>
+                    </div>
+                    <div className="w-2/12 font-black text-lg text-emerald-450 font-mono text-center">
+                      {match.homeScore}x{match.awayScore}
+                    </div>
+                    <div className="flex flex-col items-center w-5/12">
+                      {renderFlag(match.awayFlag, match.awayTeam)}
+                      <span className="text-[11px] font-bold text-slate-300 mt-1 truncate max-w-[80px]">{match.awayTeam}</span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-400 border-t border-slate-900 pt-2 font-semibold">
+                    Seu palpite: <span className="text-white font-mono font-black">{selectedCorrectGuess.homeScore} x {selectedCorrectGuess.awayScore}</span>
+                  </div>
+                </div>
+
+                {/* Creative layout preview */}
+                <div className="border border-slate-800 rounded-2xl p-4 bg-radial from-emerald-950/40 via-slate-950 to-slate-950 text-left mb-5 relative overflow-hidden">
+                  <div className="absolute top-2 right-2 text-[9px] font-bold text-yellow-500 font-mono uppercase bg-yellow-500/10 border border-yellow-500/20 px-2 py-0.5 rounded">
+                    Stories 9:16
+                  </div>
+                  <h4 className="text-[11px] font-bold text-slate-200 uppercase mb-2">Card de Vitória</h4>
+                  <div className="border border-emerald-900/60 p-3.5 rounded-xl bg-slate-900/50 flex flex-col justify-between aspect-[9/16] max-h-[140px] text-[8px] font-semibold text-slate-450 uppercase tracking-tight">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-1">
+                      <span>COPA 2026</span>
+                      <span className="text-yellow-400 font-black">🎯 CERTEIRO!</span>
+                    </div>
+                    <div className="flex items-center justify-around my-1 font-mono text-white text-[11px] font-bold">
+                      <span>{match.homeTeam}</span>
+                      <span className="text-yellow-500 font-black">{match.homeScore}x{match.awayScore}</span>
+                      <span>{match.awayTeam}</span>
+                    </div>
+                    <div className="text-center bg-emerald-900/20 py-1 rounded text-emerald-450 font-bold border border-emerald-500/10">
+                      RANKING: {userRank ? `${userRank}º LUGAR` : 'CLASS.'} ({userPoints} PTS)
+                    </div>
+                  </div>
+                </div>
+
+                {/* Share/Actions block */}
+                <div className="space-y-2.5">
+                  <button
+                    onClick={handleDownloadCard}
+                    className="w-full bg-linear-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-extrabold text-xs uppercase py-3.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-lg cursor-pointer"
+                  >
+                    💾 Baixar Imagem para Stories / Status
+                  </button>
+
+                  <button
+                    onClick={handleCopyText}
+                    className="w-full bg-slate-800 hover:bg-slate-700 text-slate-250 font-bold text-xs uppercase py-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer border border-slate-700"
+                  >
+                    📋 Copiar Texto de Vitória
+                  </button>
+                  
+                  <button
+                    onClick={() => setSelectedCorrectGuess(null)}
+                    className="w-full bg-slate-950 hover:bg-slate-900 text-slate-400 font-bold text-xs uppercase py-3 rounded-xl transition cursor-pointer border border-slate-900"
+                  >
+                    Voltar
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
     </div>
