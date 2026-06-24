@@ -124,6 +124,7 @@ export default function App() {
   } | null>(null);
   const [mobileTab, setMobileTab] = useState<'submit_guess' | 'my_guesses'>('submit_guess');
   const [selectedCorrectGuess, setSelectedCorrectGuess] = useState<Guess | null>(null);
+  const [rankingPage, setRankingPage] = useState(0);
 
   useEffect(() => {
     const savedName = localStorage.getItem('mobile_user_name');
@@ -242,6 +243,21 @@ export default function App() {
       clearInterval(progressInterval);
     };
   }, [view]);
+
+  // Handle automatic ranking rotation on TV screen (8 seconds per page of 8 participants)
+  useEffect(() => {
+    if (view !== 'tv') return;
+    const totalParticipants = appState?.participants.length || 0;
+    const totalPages = Math.ceil(totalParticipants / 8);
+    if (totalPages <= 1) {
+      setRankingPage(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setRankingPage(prev => (prev + 1) % totalPages);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [view, appState?.participants.length]);
 
   // Config states
   const [configLogoUrl, setConfigLogoUrl] = useState('');
@@ -829,6 +845,11 @@ export default function App() {
               <h2 className="font-display text-base font-bold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
                 <Trophy className="w-4 h-4 text-yellow-400" />
                 RANKING ATUALIZADO
+                {appState && appState.participants.length > 8 && (
+                  <span className="text-xs text-slate-400 font-mono lowercase font-normal ml-1">
+                    (pág. {Math.min(rankingPage + 1, Math.ceil(appState.participants.length / 8))}/{Math.ceil(appState.participants.length / 8)})
+                  </span>
+                )}
               </h2>
               <span className="text-[10px] font-mono font-bold text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded bg-emerald-950/20 uppercase tracking-wider">
                 PONTUAÇÃO
@@ -844,48 +865,58 @@ export default function App() {
                   <p className="text-xs text-slate-500 mt-1">Escaneie o QR Code central para entrar na lista!</p>
                 </div>
               ) : (
-                appState?.participants.slice(0, 8).map((p, index) => {
-                  const placeColors = [
-                    'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20', // gold
-                    'bg-slate-300 text-slate-950 shadow-lg shadow-slate-300/20', // silver
-                    'bg-amber-600 text-white shadow-lg shadow-amber-600/20', // bronze
-                  ];
-                  return (
-                    <motion.div
-                      key={p.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.08 }}
-                      className="bg-slate-950/50 hover:bg-slate-900/80 px-3 py-2.5 rounded-lg border border-slate-900 flex items-center justify-between transition-colors duration-150"
-                    >
-                      <div className="flex items-center gap-3">
-                        {/* Rank Badge */}
-                        <div className={`w-9 h-9 rounded-md font-display font-black text-base flex items-center justify-center shrink-0 ${index < 3 ? placeColors[index] : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
-                          {index + 1}º
-                        </div>
-                        {/* Name & Stats */}
-                        <div>
-                          <div className="font-extrabold text-slate-100 flex items-center gap-1.5 text-base">
-                            <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: p.avatarColor }} />
-                            {p.name}
+                (() => {
+                  const itemsPerPage = 8;
+                  const totalParticipants = appState?.participants || [];
+                  const totalPages = Math.ceil(totalParticipants.length / itemsPerPage);
+                  const currentPage = rankingPage >= totalPages ? 0 : rankingPage;
+                  const startIndex = currentPage * itemsPerPage;
+                  const slice = totalParticipants.slice(startIndex, startIndex + itemsPerPage);
+                  
+                  return slice.map((p, sliceIndex) => {
+                    const globalIndex = startIndex + sliceIndex;
+                    const placeColors = [
+                      'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20', // gold
+                      'bg-slate-300 text-slate-950 shadow-lg shadow-slate-300/20', // silver
+                      'bg-amber-600 text-white shadow-lg shadow-amber-600/20', // bronze
+                    ];
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: sliceIndex * 0.08 }}
+                        className="bg-slate-950/50 hover:bg-slate-900/80 px-3 py-2.5 rounded-lg border border-slate-900 flex items-center justify-between transition-colors duration-150"
+                      >
+                        <div className="flex items-center gap-3">
+                          {/* Rank Badge */}
+                          <div className={`w-9 h-9 rounded-md font-display font-black text-base flex items-center justify-center shrink-0 ${globalIndex < 3 ? placeColors[globalIndex] : 'bg-slate-900 text-slate-400 border border-slate-800'}`}>
+                            {globalIndex + 1}º
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400 font-mono mt-0.5">
-                            <span>{p.exactScores} Placar Cheio ({appState?.rules?.exactScore ?? 10} pts)</span>
-                            <span className="text-slate-650">•</span>
-                            <span>{p.correctWinners} Vencedores ({appState?.rules?.winnerOnly ?? 5} pts)</span>
+                          {/* Name & Stats */}
+                          <div>
+                            <div className="font-extrabold text-slate-100 flex items-center gap-1.5 text-base">
+                              <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ backgroundColor: p.avatarColor }} />
+                              {p.name}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400 font-mono mt-0.5">
+                              <span>{p.exactScores} Placar Cheio ({appState?.rules?.exactScore ?? 10} pts)</span>
+                              <span className="text-slate-650">•</span>
+                              <span>{p.correctWinners} Vencedores ({appState?.rules?.winnerOnly ?? 5} pts)</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Points Glow representation */}
-                      <div className="text-right pl-2 shrink-0">
-                        <div className="font-display font-black text-xl text-emerald-400 tracking-tight">
-                          {p.points} <span className="text-xs text-slate-450 font-normal">pts</span>
+                        {/* Points Glow representation */}
+                        <div className="text-right pl-2 shrink-0">
+                          <div className="font-display font-black text-xl text-emerald-400 tracking-tight">
+                            {p.points} <span className="text-xs text-slate-450 font-normal">pts</span>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })
+                      </motion.div>
+                    );
+                  });
+                })()
               )}
             </div>
 
