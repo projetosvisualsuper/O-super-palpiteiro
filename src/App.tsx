@@ -122,7 +122,7 @@ export default function App() {
     matchHome: string; matchAway: string; homeFlag: string; awayFlag: string;
     homeScore: number; awayScore: number;
   } | null>(null);
-  const [mobileTab, setMobileTab] = useState<'submit_guess' | 'my_guesses'>('submit_guess');
+  const [mobileTab, setMobileTab] = useState<'submit_guess' | 'my_guesses' | 'rules'>('submit_guess');
   const [selectedCorrectGuess, setSelectedCorrectGuess] = useState<Guess | null>(null);
   const [rankingPage, setRankingPage] = useState(0);
 
@@ -2284,11 +2284,11 @@ export default function App() {
             <div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-yellow-500 to-green-500 rounded-t-2xl" />
             
             {/* NEW MOBILE TAB SELECTOR */}
-            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-slate-950 rounded-xl border border-slate-850">
+            <div className="grid grid-cols-3 gap-1 mb-4 p-1 bg-slate-950 rounded-xl border border-slate-850">
               <button
                 type="button"
                 onClick={() => setMobileTab('submit_guess')}
-                className={`py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                className={`py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                   mobileTab === 'submit_guess'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
@@ -2299,13 +2299,24 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setMobileTab('my_guesses')}
-                className={`py-2 rounded-lg font-black text-xs uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                className={`py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer ${
                   mobileTab === 'my_guesses'
                     ? 'bg-emerald-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                📊 Meus Palpites
+                📊 Palpites
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileTab('rules')}
+                className={`py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition-all duration-150 cursor-pointer ${
+                  mobileTab === 'rules'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                📜 Regras
               </button>
             </div>
 
@@ -2462,7 +2473,7 @@ export default function App() {
               })()
             )}
           </>
-        ) : (
+        ) : mobileTab === 'my_guesses' ? (
           // Tab My Guesses & Ranking List
           <div className="space-y-4">
             {/* Ranking status summary card */}
@@ -2590,6 +2601,80 @@ export default function App() {
                   );
                 });
               })()}
+            </div>
+          </div>
+        ) : (
+          // Regulamento (Regras) Tab View
+          <div className="space-y-4 text-left">
+            <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-900">
+              <h3 className="text-sm font-black text-yellow-450 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                📜 Regulamento de Pontuação
+              </h3>
+              <p className="text-[11px] text-slate-350 leading-relaxed font-medium">
+                O bolão pontua automaticamente a cada partida encerrada seguindo uma escala de precisão do palpite. O sistema calcula sua pontuação baseado no resultado final:
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Placar Exato */}
+              <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="text-white">🥇 Placar Exato</span>
+                  <span className="text-yellow-400 font-black">+{appState?.rules?.exactScore ?? 10} pts</span>
+                </div>
+                <p className="text-[10px] text-slate-450 mt-1 leading-snug">
+                  Você acertou exatamente o placar do jogo.
+                </p>
+                <div className="mt-1.5 p-1 px-2 bg-slate-950/40 rounded text-[9px] font-mono text-slate-550">
+                  Ex: Palpite 2x1 • Placar real 2x1
+                </div>
+              </div>
+
+              {/* Vencedor + Saldo */}
+              <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="text-white">🥈 Vencedor + Saldo</span>
+                  <span className="text-yellow-500 font-black">+{appState?.rules?.winnerAndDiff ?? 7} pts</span>
+                </div>
+                <p className="text-[10px] text-slate-450 mt-1 leading-snug">
+                  Você acertou o vencedor e a diferença de gols (saldo), mas errou os números exatos.
+                </p>
+                <div className="mt-1.5 p-1 px-2 bg-slate-950/40 rounded text-[9px] font-mono text-slate-550">
+                  Ex: Palpite 3x1 (saldo +2) • Placar real 2x0 (saldo +2)
+                </div>
+              </div>
+
+              {/* Apenas Vencedor */}
+              <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="text-white">🥉 Apenas Vencedor</span>
+                  <span className="text-emerald-450 font-black">+{appState?.rules?.winnerOnly ?? 5} pts</span>
+                </div>
+                <p className="text-[10px] text-slate-450 mt-1 leading-snug">
+                  Você acertou quem venceu (ou empate), mas errou o saldo de gols e o placar exato.
+                </p>
+                <div className="mt-1.5 p-1 px-2 bg-slate-950/40 rounded text-[9px] font-mono text-slate-550">
+                  Ex: Palpite 2x1 (vitória) • Placar real 3x0 (vitória)
+                </div>
+              </div>
+
+              {/* Gol de 1 Time */}
+              <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                <div className="flex items-center justify-between font-bold text-xs">
+                  <span className="text-white">⚽ Gol de 1 Time</span>
+                  <span className="text-slate-350 font-black">+{appState?.rules?.oneTeamScore ?? 2} pts</span>
+                </div>
+                <p className="text-[10px] text-slate-450 mt-1 leading-snug">
+                  Você errou o vencedor, mas acertou os gols de pelo menos um dos times.
+                </p>
+                <div className="mt-1.5 p-1 px-2 bg-slate-950/40 rounded text-[9px] font-mono text-slate-550">
+                  Ex: Palpite 1x2 • Placar real 1x0 (acertou o gol de 1 do mandante)
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-emerald-950/30 border border-emerald-500/10 rounded-xl text-[10px] text-emerald-450 font-medium leading-relaxed">
+              💡 Os palpites podem ser enviados ou alterados até o horário de início oficial de cada partida na TV.
             </div>
           </div>
         )}
