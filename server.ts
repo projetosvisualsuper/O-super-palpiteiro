@@ -300,8 +300,13 @@ export async function createApp() {
     state.guesses.push(newGuess);
 
     recalculateLeaderboard();
-    saveAppState(state).catch(err => console.error("[Firebase] Error updating state on guess:", err));
-    res.json({ success: true, state: getCleanState(state) });
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on guess:", err);
+      res.status(500).json({ error: "Erro ao salvar palpite no banco de dados." });
+    }
   });
 
   // Login a participant (validates existing PIN)
@@ -391,8 +396,13 @@ export async function createApp() {
     };
 
     recalculateLeaderboard();
-    saveAppState(state).catch(err => console.error("[Firebase] Error updating state on match status edit:", err));
-    res.json({ success: true, state: getCleanState(state) });
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on match status edit:", err);
+      res.status(500).json({ error: "Erro ao salvar resultado da partida no banco de dados." });
+    }
   });
 
   // Admin: Add or update custom match
@@ -417,8 +427,13 @@ export async function createApp() {
     };
 
     state.matches.push(newMatch);
-    saveAppState(state).catch(err => console.error("[Firebase] Error updating state on creating match:", err));
-    res.json({ success: true, state: getCleanState(state) });
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on creating match:", err);
+      res.status(500).json({ error: "Erro ao salvar nova partida no banco de dados." });
+    }
   });
 
   // Admin: Sync with real World Cup 2026 matches using Gemini API (Google Search Grounding)
@@ -444,38 +459,70 @@ export async function createApp() {
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Today's date is June 23, 2026. Query the official FIFA World Cup 2026 matches and scores page at "https://www.fifa.com/pt/tournaments/mens/worldcup/canadamexicousa2026/scores-fixtures?country=BR&wtw-filter=ALL" to find the latest real-world 2026 FIFA World Cup matches (completed, live, and upcoming schedule). 
-        Return the list of matches as a JSON array of objects fitting this structure:
-        {
-          "id": string, // format like "m_real_1", "m_real_2", etc.
-          "homeTeam": string, // Name in Portuguese (e.g., "Brasil", "Alemanha", "Estados Unidos")
-          "awayTeam": string, // Name in Portuguese
-          "homeFlag": string, // Emoji flag
-          "awayFlag": string, // Emoji flag
-          "homeScore": number | null, // score if finished/live, null if scheduled
-          "awayScore": number | null, // score if finished/live, null if scheduled
-          "status": "scheduled" | "live" | "finished",
-          "dateTime": string // ISO 8601 string, e.g. "2026-06-11T16:00:00Z"
-        }
-        Provide at least 15-20 matches showing the progression of the tournament starting from June 20, 2026 up to the current date (June 23, 2026) and upcoming matches in the next few days. Match team names must be in Portuguese (e.g. Alemanha instead of Germany, Holanda instead of Netherlands, Colômbia instead of Colombia).
-        Respond ONLY with the raw JSON array.`,
-        config: {
-          tools: [{ googleSearch: {} }],
-          responseMimeType: "application/json"
-        }
-      });
+      const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+      let responseText = "";
 
-      const text = response.text;
-      if (!text) {
+      try {
+        console.log("[Server] Attempting Gemini content generation with Google Search Grounding...");
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: `Today's date is ${todayStr}. Search for real-world 2026 FIFA World Cup matches, scores, and fixtures.
+          Use Google Search to find matches that have been played since the start of the tournament (June 11, 2026) up to today, and scheduled matches for the next few days.
+          Return the list of matches as a JSON array of objects fitting this structure:
+          {
+            "id": string, // format like "m_real_1", "m_real_2", etc.
+            "homeTeam": string, // Name in Portuguese (e.g., "Brasil", "Alemanha", "Estados Unidos")
+            "awayTeam": string, // Name in Portuguese
+            "homeFlag": string, // Emoji flag
+            "awayFlag": string, // Emoji flag
+            "homeScore": number | null, // score if finished/live, null if scheduled
+            "awayScore": number | null, // score if finished/live, null if scheduled
+            "status": "scheduled" | "live" | "finished",
+            "dateTime": string // ISO 8601 string, e.g. "2026-06-11T16:00:00Z"
+          }
+          Include at least 15-20 matches showing the progression of the tournament starting from June 20, 2026 up to today and upcoming matches in the next few days. Team names must be in Portuguese (e.g. Alemanha, Holanda, etc.).
+          Respond ONLY with the JSON array inside a \`\`\`json \`\`\` block.`,
+          config: {
+            tools: [{ googleSearch: {} }]
+          }
+        });
+        responseText = response.text || "";
+      } catch (searchError) {
+        console.warn("[Server] Gemini Search Grounding failed, retrying without Search Tool...", searchError);
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: `Today's date is ${todayStr}. Return the list of 2026 FIFA World Cup matches, scores, and fixtures based on your knowledge.
+          Provide the matches played since June 20, 2026 to June 25, 2026, and their scores.
+          Return the list of matches as a JSON array of objects fitting this structure:
+          {
+            "id": string, // format like "m_real_1", "m_real_2", etc.
+            "homeTeam": string, // Name in Portuguese
+            "awayTeam": string, // Name in Portuguese
+            "homeFlag": string, // Emoji flag
+            "awayFlag": string, // Emoji flag
+            "homeScore": number | null,
+            "awayScore": number | null,
+            "status": "scheduled" | "live" | "finished",
+            "dateTime": string
+          }
+          Respond ONLY with the JSON array inside a \`\`\`json \`\`\` block.`
+        });
+        responseText = response.text || "";
+      }
+
+      if (!responseText) {
         throw new Error("Empty response from Gemini API");
       }
 
-      console.log("[Server] Gemini raw response:", text);
+      console.log("[Server] Gemini raw response:", responseText);
+      let text = responseText;
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        text = jsonMatch[1];
+      }
       const parsedMatches: Match[] = JSON.parse(text.trim());
 
-      if (!Array.isArray(parsedMatches) || parsedMatches.length === 0) {
+      if (!parsedMatches || !Array.isArray(parsedMatches) || parsedMatches.length === 0) {
         throw new Error("Gemini response is not a valid non-empty array");
       }
 
@@ -493,7 +540,7 @@ export async function createApp() {
       recalculateLeaderboard();
       await saveAppState(state);
 
-      console.log(`[Server] Successfully synced ${state.matches.length} matches using Gemini Search Grounding.`);
+      console.log(`[Server] Successfully synced ${state.matches.length} matches using Gemini.`);
       return res.json({ 
         success: true, 
         count: state.matches.length, 
@@ -503,24 +550,15 @@ export async function createApp() {
 
     } catch (error) {
       console.error("[Server] Error synchronizing with Gemini search:", error);
-      // Fallback
-      console.log("[Server] Falling back to official local initial matches...");
-      state.matches = [...INITIAL_MATCHES];
-      state.guesses = (state.guesses || []).filter(g => INITIAL_MATCHES.some(im => im.id === g.matchId));
-      recalculateLeaderboard();
-      await saveAppState(state).catch(() => {});
-      
-      res.json({
-        success: true,
-        count: INITIAL_MATCHES.length,
-        isFallback: true,
-        state: getCleanState(state),
-        warning: "Gemini Sync failed; reverted to fallback schedule: " + (error instanceof Error ? error.message : String(error))
+      // DO NOT overwrite Firestore database state on sync failure!
+      // Simply return the current state with a warning.
+      return res.status(500).json({
+        error: "Falha na sincronização: o serviço da API do Gemini está temporariamente indisponível. Tente novamente mais tarde.",
+        state: getCleanState(state)
       });
     }
   });
 
-  // Admin: Update custom logo, prize, general banner instructions, and score rules
   app.post("/api/admin/config", async (req, res) => {
     await getLatestState();
     const { 
@@ -572,8 +610,13 @@ export async function createApp() {
       recalculateLeaderboard();
     }
     
-    saveAppState(state).catch(err => console.error("[Firebase] Error updating state on config edit:", err));
-    res.json({ success: true, state: getCleanState(state) });
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on config edit:", err);
+      res.status(500).json({ error: "Erro ao salvar configurações no banco de dados." });
+    }
   });
 
   // Admin: Reload State from Firestore manually (clears cache)
@@ -628,8 +671,13 @@ export async function createApp() {
       championshipName: "COPA DO MUNDO DE 2026"
     };
     recalculateLeaderboard();
-    saveAppState(state).catch(err => console.error("[Firebase] Error updating state on reset:", err));
-    res.json({ success: true, state: getCleanState(state) });
+    try {
+      await saveAppState(state);
+      res.json({ success: true, state: getCleanState(state) });
+    } catch (err) {
+      console.error("[Firebase] Error updating state on reset:", err);
+      res.status(500).json({ error: "Erro ao resetar estado no banco de dados." });
+    }
   });
 
   // Fix match times: shift all match dateTimes by +3h (Brasília offset)
