@@ -947,8 +947,8 @@ export default function App() {
           <div className="col-span-4 flex flex-col justify-between items-center h-full gap-3 py-1 relative">
             
             {/* Top info tag */}
-            <div className="bg-slate-900/80 border border-emerald-500/30 px-6 py-2.5 rounded-2xl backdrop-blur-md text-center max-w-sm w-full animate-pulse">
-              <p className="text-lg font-display font-black tracking-widest uppercase text-yellow-400">
+            <div className="bg-slate-900/80 border border-emerald-500/30 px-6 py-2.5 rounded-2xl backdrop-blur-md text-center max-w-md w-full animate-pulse flex justify-center items-center">
+              <p className="text-lg font-display font-black tracking-widest uppercase text-yellow-400 whitespace-nowrap">
                 ⭐ ENVIE SEU PALPITE AGORA! ⭐
               </p>
             </div>
