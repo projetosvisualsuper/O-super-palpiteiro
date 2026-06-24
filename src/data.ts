@@ -266,6 +266,118 @@ export const INITIAL_MATCHES: Match[] = [
     awayScore: null,
     status: 'scheduled',
     dateTime: '2026-06-25T01:00:00Z', // 22:00 BRT
+  },
+  // ====== 25 DE JUNHO (Quinta-feira) ======
+  {
+    id: "m_real_24",
+    homeTeam: "Curaçau",
+    awayTeam: "Costa do Marfim",
+    homeFlag: "🇨🇼",
+    awayFlag: "🇨🇮",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-25T19:00:00Z" // 16:00 BRT
+  },
+  {
+    id: "m_real_25",
+    homeTeam: "Tunísia",
+    awayTeam: "Holanda",
+    homeFlag: "🇹🇳",
+    awayFlag: "🇳🇱",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-25T19:00:00Z" // 16:00 BRT
+  },
+  {
+    id: "m_real_26",
+    homeTeam: "Japão",
+    awayTeam: "Suécia",
+    homeFlag: "🇯🇵",
+    awayFlag: "🇸🇪",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-25T22:00:00Z" // 19:00 BRT
+  },
+  {
+    id: "m_real_27",
+    homeTeam: "Turquia",
+    awayTeam: "Estados Unidos",
+    homeFlag: "🇹🇷",
+    awayFlag: "🇺🇸",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-25T22:00:00Z" // 19:00 BRT
+  },
+  // ====== 26 DE JUNHO (Sexta-feira) ======
+  {
+    id: "m_real_28",
+    homeTeam: "Noruega",
+    awayTeam: "França",
+    homeFlag: "🇳🇴",
+    awayFlag: "🇫🇷",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-26T19:00:00Z" // 16:00 BRT
+  },
+  {
+    id: "m_real_29",
+    homeTeam: "Senegal",
+    awayTeam: "Iraque",
+    homeFlag: "🇸🇳",
+    awayFlag: "🇮🇶",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-26T19:00:00Z" // 16:00 BRT
+  },
+  {
+    id: "m_real_30",
+    homeTeam: "Uruguai",
+    awayTeam: "Espanha",
+    homeFlag: "🇺🇾",
+    awayFlag: "🇪🇸",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-26T22:00:00Z" // 19:00 BRT
+  },
+  {
+    id: "m_real_31",
+    homeTeam: "Cabo Verde",
+    awayTeam: "Arábia Saudita",
+    homeFlag: "🇨🇻",
+    awayFlag: "🇸🇦",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-26T22:00:00Z" // 19:00 BRT
+  },
+  {
+    id: "m_real_32",
+    homeTeam: "Egito",
+    awayTeam: "RI do Irã",
+    homeFlag: "🇪🇬",
+    awayFlag: "🇮🇷",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-27T01:00:00Z" // 22:00 BRT on June 26
+  },
+  {
+    id: "m_real_33",
+    homeTeam: "Nova Zelândia",
+    awayTeam: "Bélgica",
+    homeFlag: "🇳🇿",
+    awayFlag: "🇧🇪",
+    homeScore: null,
+    awayScore: null,
+    status: "scheduled",
+    dateTime: "2026-06-27T01:00:00Z" // 22:00 BRT on June 26
   }
 ];
 
