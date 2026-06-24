@@ -244,11 +244,11 @@ export default function App() {
     };
   }, [view]);
 
-  // Handle automatic ranking rotation on TV screen (8 seconds per page of 8 participants)
+  // Handle automatic ranking rotation on TV screen (8 seconds per page of 4 participants)
   useEffect(() => {
     if (view !== 'tv') return;
     const totalParticipants = appState?.participants.length || 0;
-    const totalPages = Math.ceil(totalParticipants / 8);
+    const totalPages = Math.ceil(totalParticipants / 4);
     if (totalPages <= 1) {
       setRankingPage(0);
       return;
@@ -845,9 +845,9 @@ export default function App() {
               <h2 className="font-display text-base font-bold text-slate-100 uppercase tracking-wide flex items-center gap-1.5">
                 <Trophy className="w-4 h-4 text-yellow-400" />
                 RANKING ATUALIZADO
-                {appState && appState.participants.length > 8 && (
+                {appState && appState.participants.length > 4 && (
                   <span className="text-xs text-slate-400 font-mono lowercase font-normal ml-1">
-                    (pág. {Math.min(rankingPage + 1, Math.ceil(appState.participants.length / 8))}/{Math.ceil(appState.participants.length / 8)})
+                    (pág. {Math.min(rankingPage + 1, Math.ceil(appState.participants.length / 4))}/{Math.ceil(appState.participants.length / 4)})
                   </span>
                 )}
               </h2>
@@ -866,7 +866,7 @@ export default function App() {
                 </div>
               ) : (
                 (() => {
-                  const itemsPerPage = 8;
+                  const itemsPerPage = 4;
                   const totalParticipants = appState?.participants || [];
                   const totalPages = Math.ceil(totalParticipants.length / itemsPerPage);
                   const currentPage = rankingPage >= totalPages ? 0 : rankingPage;
