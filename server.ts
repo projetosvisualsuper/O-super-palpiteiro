@@ -102,6 +102,74 @@ function getCleanState(rawState: AppState): AppState {
   };
 }
 
+function normalizeTeamName(name: string): string {
+  let n = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  if (n === "eua" || n === "estados unidos da america" || n === "usa") return "estados unidos";
+  if (n === "holanda" || n === "paises baixos" || n === "netherlands") return "paises baixos";
+  if (n === "coreia do sul" || n === "republica da coreia" || n === "south korea") return "coreia do sul";
+  if (n === "rd congo" || n === "republica democratica do congo" || n === "congo dr" || n === "dr congo") return "rd congo";
+  if (n === "iraque" || n === "iraq") return "iraque";
+  if (n === "belgica" || n === "belgium") return "belgica";
+  if (n === "ira" || n === "iran" || n === "republica islamica do ira") return "ira";
+  if (n === "nova zelandia" || n === "new zealand") return "nova zelandia";
+  if (n === "egito" || n === "egypt") return "egito";
+  if (n === "franca" || n === "france") return "franca";
+  if (n === "noruega" || n === "norway") return "noruega";
+  if (n === "senegal") return "senegal";
+  if (n === "portugal") return "portugal";
+  if (n === "uzbequistao" || n === "uzbekistan") return "uzbequistao";
+  if (n === "colombia" || n === "colombia") return "colombia";
+  if (n === "suica" || n === "switzerland") return "suica";
+  if (n === "canada") return "canada";
+  if (n === "bosnia e herzegovina" || n === "bosnia and herzegovina") return "bosnia e herzegovina";
+  if (n === "catar" || n === "qatar") return "catar";
+  if (n === "escocia" || n === "scotland") return "escocia";
+  if (n === "brasil" || n === "brazil") return "brasil";
+  if (n === "marrocos" || n === "morocco") return "marrocos";
+  if (n === "haiti") return "haiti";
+  if (n === "tchequia" || n === "czechia" || n === "republica tcheca") return "tchequia";
+  if (n === "mexico") return "mexico";
+  if (n === "africa do sul" || n === "south africa") return "africa do sul";
+  if (n === "cabo verde" || n === "cape verde") return "cabo verde";
+  if (n === "arabia saudita" || n === "saudi arabia") return "arabia saudita";
+  if (n === "uruguai" || n === "uruguay") return "uruguai";
+  if (n === "espanha" || n === "spain") return "espanha";
+  return n;
+}
+
+function findMatchingMatch(parsed: Match, existingList: Match[]): Match | undefined {
+  const parsedHome = normalizeTeamName(parsed.homeTeam);
+  const parsedAway = normalizeTeamName(parsed.awayTeam);
+  
+  return existingList.find(em => {
+    const emHome = normalizeTeamName(em.homeTeam);
+    const emAway = normalizeTeamName(em.awayTeam);
+    
+    return (parsedHome === emHome && parsedAway === emAway) || 
+           (parsedHome === emAway && parsedAway === emHome);
+  });
+}
+
+function mergeSyncedMatches(parsedMatches: Match[]): Match[] {
+  const updatedMatches = [...state.matches];
+  for (const pm of parsedMatches) {
+    const existing = findMatchingMatch(pm, updatedMatches);
+    if (existing) {
+      // Update details but PRESERVE the existing ID!
+      existing.homeScore = pm.homeScore;
+      existing.awayScore = pm.awayScore;
+      existing.status = pm.status;
+      existing.dateTime = pm.dateTime || existing.dateTime;
+      if (pm.homeFlag) existing.homeFlag = pm.homeFlag;
+      if (pm.awayFlag) existing.awayFlag = pm.awayFlag;
+    } else {
+      // If not found in our existing list, add it
+      updatedMatches.push(pm);
+    }
+  }
+  return updatedMatches;
+}
+
 let lastAutoSyncTime = 0;
 const AUTO_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour in ms
 let isAutoSyncRunning = false;
@@ -203,8 +271,7 @@ async function performAutoSyncMatches(): Promise<boolean> {
       }
     }
 
-    state.matches = parsedMatches;
-    state.guesses = (state.guesses || []).filter(g => state.matches.some(sm => sm.id === g.matchId));
+    state.matches = mergeSyncedMatches(parsedMatches);
     recalculateLeaderboard();
     await saveAppState(state);
 
@@ -654,10 +721,7 @@ export async function createApp() {
         }
       }
 
-      state.matches = parsedMatches;
-      // Keep guesses but reset those that do not map to the synced matchIds
-      state.guesses = (state.guesses || []).filter(g => state.matches.some(sm => sm.id === g.matchId));
-      
+      state.matches = mergeSyncedMatches(parsedMatches);
       recalculateLeaderboard();
       await saveAppState(state);
 
