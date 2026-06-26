@@ -425,11 +425,7 @@ export async function createApp() {
     console.error("[Server] Error syncing initial state with Firestore:", error);
   }
 
-  // API ROOTS
   app.get("/api/status", async (req, res) => {
-    // Trigger background auto-sync if due (non-blocking)
-    performAutoSyncMatches().catch(err => console.error("[Auto-Sync] Erro no background job:", err));
-
     const latestState = await getLatestState();
     res.json(getCleanState(latestState));
   });
@@ -1072,12 +1068,6 @@ if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
     const PORT = process.env.PORT || 3000;
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
-
-      // Start background auto-sync timer (every 10 minutes checks if 1 hour has elapsed)
-      console.log("[Auto-Sync] Inicializando temporizador periódico para atualização automática dos jogos...");
-      setInterval(() => {
-        performAutoSyncMatches().catch(err => console.error("[Auto-Sync] Erro no timer periódico:", err));
-      }, 10 * 60 * 1000); // 10 minutes
     });
   }).catch(err => {
     console.error("Failed to start backend server: ", err);
