@@ -150,6 +150,9 @@ export default function App() {
   const [newAwayFlag, setNewAwayFlag] = useState('🇦🇷');
   const [isSyncingMatches, setIsSyncingMatches] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [backupFeedback, setBackupFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
 
   // Match tab rotation state: 'results' (últimos jogos), 'upcoming' (próximos jogos), 'brazil' (jogos do Brasil)
   const [matchTab, setMatchTab] = useState<'results' | 'upcoming' | 'brazil'>('upcoming');
@@ -601,6 +604,80 @@ export default function App() {
       setIsSyncingMatches(false);
       // Auto clear feedback after 8 seconds
       setTimeout(() => setSyncFeedback(null), 8000);
+    }
+  };
+
+  // Admin: Trigger manual database backup
+  const triggerBackup = async () => {
+    setIsBackingUp(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch('/api/admin/backup-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setBackupFeedback({
+          text: `Backup criado com sucesso: ${data.filename} (Jogos: ${data.stats.matches}, Palpites: ${data.stats.guesses})`
+        });
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setBackupFeedback({
+          text: errData.error || 'Erro ao realizar o backup no servidor',
+          isError: true
+        });
+      }
+    } catch (err) {
+      console.error('Erro de conexão ao realizar backup: ', err);
+      setBackupFeedback({
+        text: 'Erro de conexão com o servidor ao realizar backup',
+        isError: true
+      });
+    } finally {
+      setIsBackingUp(false);
+      setTimeout(() => setBackupFeedback(null), 10000);
+    }
+  };
+
+  // Admin: Trigger database restore from the latest backup
+  const triggerRestore = async () => {
+    const confirmRestore = window.confirm(
+      "ATENÇÃO: Você tem certeza que deseja restaurar o banco de dados para a última cópia de segurança (backup_latest.json)? " +
+      "Isso irá sobrescrever todas as modificações, palpites e pontos atuais no banco de dados com a versão salva!"
+    );
+    if (!confirmRestore) return;
+
+    setIsRestoring(true);
+    setBackupFeedback(null);
+    try {
+      const res = await fetch('/api/admin/restore-db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: 'backup_latest.json' })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAppState(data.state);
+        setBackupFeedback({
+          text: `Banco de dados restaurado com sucesso a partir de ${data.filename}!`
+        });
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setBackupFeedback({
+          text: errData.error || 'Erro ao restaurar o banco de dados no servidor',
+          isError: true
+        });
+      }
+    } catch (err) {
+      console.error('Erro de conexão ao restaurar banco de dados: ', err);
+      setBackupFeedback({
+        text: 'Erro de conexão com o servidor ao restaurar banco de dados',
+        isError: true
+      });
+    } finally {
+      setIsRestoring(false);
+      setTimeout(() => setBackupFeedback(null), 10000);
     }
   };
 
@@ -1661,6 +1738,50 @@ export default function App() {
                         <div className={`mt-3 p-3 rounded-lg text-[10px] font-bold leading-relaxed border flex items-start gap-1.5 ${syncFeedback.isError ? 'bg-red-950/40 border-red-900/30 text-red-300' : 'bg-emerald-950/40 border-emerald-900/30 text-emerald-300'}`}>
                           <span>{syncFeedback.isError ? '❌' : '✨'}</span>
                           <span className="flex-1">{syncFeedback.text}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Cópia de Segurança (Backup) Card */}
+                    <div className="bg-slate-950 p-5 rounded-2xl border border-slate-850 shadow-inner relative overflow-hidden">
+                      <h4 className="font-display font-black text-xs uppercase tracking-wider text-emerald-450 mb-1.5 flex items-center gap-1.5">
+                        <Settings className="w-4 h-4 text-emerald-450" />
+                        Cópia de Segurança (Backup)
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-4">
+                        Salve o estado completo do banco de dados (palpites, participantes e pontos) em um arquivo JSON local ou restaure a partir do backup mais recente.
+                      </p>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={triggerBackup}
+                          disabled={isBackingUp || isRestoring}
+                          type="button"
+                          className={`py-3 px-2 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 border transition ${
+                            isBackingUp ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200 cursor-pointer shadow-md'
+                          }`}
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isBackingUp ? 'animate-spin' : ''}`} />
+                          Criar Backup
+                        </button>
+
+                        <button
+                          onClick={triggerRestore}
+                          disabled={isBackingUp || isRestoring}
+                          type="button"
+                          className={`py-3 px-2 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 border transition ${
+                            isRestoring ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200 cursor-pointer shadow-md'
+                          }`}
+                        >
+                          <RotateCcw className={`w-3.5 h-3.5 ${isRestoring ? 'animate-spin' : ''}`} />
+                          Restaurar
+                        </button>
+                      </div>
+
+                      {backupFeedback && (
+                        <div className={`mt-3 p-3 rounded-lg text-[10px] font-bold leading-relaxed border flex items-start gap-1.5 ${backupFeedback.isError ? 'bg-red-950/40 border-red-900/30 text-red-300' : 'bg-emerald-950/40 border-emerald-900/30 text-emerald-300'}`}>
+                          <span>{backupFeedback.isError ? '❌' : '✨'}</span>
+                          <span className="flex-1">{backupFeedback.text}</span>
                         </div>
                       )}
                     </div>

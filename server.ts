@@ -619,6 +619,105 @@ export async function createApp() {
     }
   });
 
+  // Admin: Backup Database to a local JSON file
+  app.post("/api/admin/backup-db", async (req, res) => {
+    try {
+      console.log("[Server] Admin backup request received.");
+      const fs = await import("fs");
+      const path = await import("path");
+      
+      const latestState = await getLatestState(true);
+      if (!latestState) {
+        return res.status(500).json({ error: "Não foi possível carregar o estado do banco de dados." });
+      }
+
+      const backupDir = path.join(process.cwd(), "backups");
+      if (!fs.existsSync(backupDir)) {
+        fs.mkdirSync(backupDir, { recursive: true });
+      }
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+
+      const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+      const backupFileName = `backup_${timestamp}.json`;
+      const backupPath = path.join(backupDir, backupFileName);
+      const latestPath = path.join(backupDir, "backup_latest.json");
+
+      const dataStr = JSON.stringify(latestState, null, 2);
+      fs.writeFileSync(backupPath, dataStr, "utf8");
+      fs.writeFileSync(latestPath, dataStr, "utf8");
+
+      console.log(`[Server] Backup success: backups/${backupFileName}`);
+      res.json({ 
+        success: true, 
+        filename: backupFileName, 
+        timestamp,
+        stats: {
+          matches: latestState.matches?.length || 0,
+          participants: latestState.participants?.length || 0,
+          guesses: latestState.guesses?.length || 0
+        }
+      });
+    } catch (error) {
+      console.error("[Server] Error during manual database backup:", error);
+      res.status(500).json({ error: "Erro ao realizar o backup do banco de dados" });
+    }
+  });
+
+  // Admin: Restore Database from a local JSON file
+  app.post("/api/admin/restore-db", async (req, res) => {
+    try {
+      console.log("[Server] Admin restore request received.");
+      const fs = await import("fs");
+      const path = await import("path");
+      
+      let { filename } = req.body;
+      const backupDir = path.join(process.cwd(), "backups");
+
+      if (!filename) {
+        filename = "backup_latest.json";
+      }
+
+      let backupPath = path.isAbsolute(filename) ? filename : path.join(backupDir, filename);
+      if (!fs.existsSync(backupPath) && !path.isAbsolute(filename)) {
+        backupPath = path.resolve(filename);
+      }
+
+      if (!fs.existsSync(backupPath)) {
+        return res.status(404).json({ error: `Arquivo de backup não encontrado: ${filename}` });
+      }
+
+      const rawData = fs.readFileSync(backupPath, "utf8");
+      const restoredState = JSON.parse(rawData);
+
+      if (!restoredState || !restoredState.matches || !restoredState.participants || !restoredState.guesses) {
+        return res.status(400).json({ error: "O arquivo de backup selecionado não contém uma estrutura de estado válida." });
+      }
+
+      console.log("[Server] Restoring state in Firestore...");
+      const success = await saveAppState(restoredState);
+
+      if (success) {
+        state = restoredState;
+        recalculateLeaderboard();
+        lastDbLoadTime = Date.now();
+        console.log(`[Server] Database restored successfully from: ${filename}`);
+        res.json({ success: true, filename, state: getCleanState(state) });
+      } else {
+        res.status(500).json({ error: "Falha ao salvar os dados restaurados no Firestore." });
+      }
+    } catch (error) {
+      console.error("[Server] Error during database restore:", error);
+      res.status(500).json({ error: "Erro ao restaurar o banco de dados" });
+    }
+  });
+
   // Admin: Reload State from Firestore manually (clears cache)
   app.post("/api/admin/reload-db", async (req, res) => {
     try {
