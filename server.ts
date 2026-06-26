@@ -151,20 +151,29 @@ function findMatchingMatch(parsed: Match, existingList: Match[]): Match | undefi
 }
 
 function mergeSyncedMatches(parsedMatches: Match[]): Match[] {
-  const updatedMatches = [...state.matches];
+  const updatedMatches = state.matches.map(m => ({ ...m }));
   for (const pm of parsedMatches) {
     const existing = findMatchingMatch(pm, updatedMatches);
     if (existing) {
+      const emHome = normalizeTeamName(existing.homeTeam);
+      const pmHome = normalizeTeamName(pm.homeTeam);
+      const isInverted = emHome !== pmHome;
+
       // Update details but PRESERVE the existing ID!
-      existing.homeScore = pm.homeScore;
-      existing.awayScore = pm.awayScore;
-      existing.status = pm.status;
+      existing.homeScore = pm.homeScore !== undefined && pm.homeScore !== null ? (isInverted ? pm.awayScore : pm.homeScore) : existing.homeScore;
+      existing.awayScore = pm.awayScore !== undefined && pm.awayScore !== null ? (isInverted ? pm.homeScore : pm.awayScore) : existing.awayScore;
+      existing.status = pm.status || existing.status;
       existing.dateTime = pm.dateTime || existing.dateTime;
-      if (pm.homeFlag) existing.homeFlag = pm.homeFlag;
-      if (pm.awayFlag) existing.awayFlag = pm.awayFlag;
-    } else {
-      // If not found in our existing list, add it
-      updatedMatches.push(pm);
+      
+      if (pm.homeFlag && pm.awayFlag) {
+        if (isInverted) {
+          existing.homeFlag = pm.awayFlag;
+          existing.awayFlag = pm.homeFlag;
+        } else {
+          existing.homeFlag = pm.homeFlag;
+          existing.awayFlag = pm.awayFlag;
+        }
+      }
     }
   }
   return updatedMatches;
