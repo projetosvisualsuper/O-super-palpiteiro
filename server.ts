@@ -159,11 +159,10 @@ function mergeSyncedMatches(parsedMatches: Match[]): Match[] {
       const pmHome = normalizeTeamName(pm.homeTeam);
       const isInverted = emHome !== pmHome;
 
-      // Update details but PRESERVE the existing ID!
+      // Update details but PRESERVE the existing ID and canonical dateTime!
       existing.homeScore = pm.homeScore !== undefined && pm.homeScore !== null ? (isInverted ? pm.awayScore : pm.homeScore) : existing.homeScore;
       existing.awayScore = pm.awayScore !== undefined && pm.awayScore !== null ? (isInverted ? pm.homeScore : pm.awayScore) : existing.awayScore;
       existing.status = pm.status || existing.status;
-      existing.dateTime = pm.dateTime || existing.dateTime;
       
       if (pm.homeFlag && pm.awayFlag) {
         if (isInverted) {
