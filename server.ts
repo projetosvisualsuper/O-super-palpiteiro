@@ -670,31 +670,36 @@ export async function createApp() {
     }
   });
 
-  // Admin: Restore Database from a local JSON file
+  // Admin: Restore Database from a local JSON file or sent state object
   app.post("/api/admin/restore-db", async (req, res) => {
     try {
       console.log("[Server] Admin restore request received.");
       const fs = await import("fs");
       const path = await import("path");
       
-      let { filename } = req.body;
-      const backupDir = path.join(process.cwd(), "backups");
+      let restoredState = req.body.state;
+      let filename = req.body.filename;
 
-      if (!filename) {
-        filename = "backup_latest.json";
+      if (!restoredState) {
+        if (!filename) {
+          filename = "backup_latest.json";
+        }
+
+        const backupDir = path.join(process.cwd(), "backups");
+        let backupPath = path.isAbsolute(filename) ? filename : path.join(backupDir, filename);
+        if (!fs.existsSync(backupPath) && !path.isAbsolute(filename)) {
+          backupPath = path.resolve(filename);
+        }
+
+        if (!fs.existsSync(backupPath)) {
+          return res.status(404).json({ error: `Arquivo de backup não encontrado: ${filename}` });
+        }
+
+        const rawData = fs.readFileSync(backupPath, "utf8");
+        restoredState = JSON.parse(rawData);
+      } else {
+        filename = "uploaded_file.json";
       }
-
-      let backupPath = path.isAbsolute(filename) ? filename : path.join(backupDir, filename);
-      if (!fs.existsSync(backupPath) && !path.isAbsolute(filename)) {
-        backupPath = path.resolve(filename);
-      }
-
-      if (!fs.existsSync(backupPath)) {
-        return res.status(404).json({ error: `Arquivo de backup não encontrado: ${filename}` });
-      }
-
-      const rawData = fs.readFileSync(backupPath, "utf8");
-      const restoredState = JSON.parse(rawData);
 
       if (!restoredState || !restoredState.matches || !restoredState.participants || !restoredState.guesses) {
         return res.status(400).json({ error: "O arquivo de backup selecionado não contém uma estrutura de estado válida." });

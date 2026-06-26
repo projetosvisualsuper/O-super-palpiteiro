@@ -609,25 +609,46 @@ export default function App() {
 
   // Admin: Trigger manual database backup
   const triggerBackup = async () => {
+    if (!appState) return;
     setIsBackingUp(true);
     setBackupFeedback(null);
     try {
+      // 1. Call server to save server-side backup
       const res = await fetch('/api/admin/backup-db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      let serverFileName = 'backup.json';
       if (res.ok) {
         const data = await res.json();
-        setBackupFeedback({
-          text: `Backup criado com sucesso: ${data.filename} (Jogos: ${data.stats.matches}, Palpites: ${data.stats.guesses})`
-        });
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        setBackupFeedback({
-          text: errData.error || 'Erro ao realizar o backup no servidor',
-          isError: true
-        });
+        serverFileName = data.filename;
       }
+
+      // 2. Trigger browser download of the current state
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, "0");
+      const day = String(now.getDate()).padStart(2, "0");
+      const hours = String(now.getHours()).padStart(2, "0");
+      const minutes = String(now.getMinutes()).padStart(2, "0");
+      const seconds = String(now.getSeconds()).padStart(2, "0");
+      const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+      const downloadFileName = `backup_bolao_${timestamp}.json`;
+
+      const blob = new Blob([JSON.stringify(appState, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = downloadFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setBackupFeedback({
+        text: `Backup criado e baixado com sucesso: ${downloadFileName} (Jogos: ${appState.matches?.length || 0}, Palpites: ${appState.guesses?.length || 0})`
+      });
     } catch (err) {
       console.error('Erro de conexão ao realizar backup: ', err);
       setBackupFeedback({
@@ -679,6 +700,63 @@ export default function App() {
       setIsRestoring(false);
       setTimeout(() => setBackupFeedback(null), 10000);
     }
+  };
+
+  // Admin: Handle backup file upload and restore
+  const handleBackupUpload = async (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const rawContent = event.target?.result as string;
+        const json = JSON.parse(rawContent);
+
+        if (!json.matches || !json.participants || !json.guesses) {
+          alert("Erro: O arquivo de backup selecionado não contém uma estrutura de estado válida.");
+          return;
+        }
+
+        const confirmRestore = window.confirm(
+          `ATENÇÃO: Você tem certeza de que deseja restaurar o banco de dados usando o arquivo "${file.name}"? ` +
+          "Esta ação irá sobrescrever o banco de dados atual com a versão do arquivo!"
+        );
+        if (!confirmRestore) return;
+
+        setIsRestoring(true);
+        setBackupFeedback(null);
+
+        const res = await fetch('/api/admin/restore-db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: json })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setAppState(data.state);
+          setBackupFeedback({
+            text: `Banco de dados restaurado com sucesso a partir de seu arquivo local: ${file.name}!`
+          });
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          setBackupFeedback({
+            text: errData.error || 'Erro ao restaurar o banco de dados via arquivo',
+            isError: true
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao decodificar arquivo de backup JSON: " + err);
+      } finally {
+        setIsRestoring(false);
+        // Clear input value so same file can be selected again
+        e.target.value = '';
+        setTimeout(() => setBackupFeedback(null), 10000);
+      }
+    };
+    reader.readAsText(file);
   };
 
   // Admin: Save custom config (logo, prize, instruction text, and point weights)
@@ -1749,8 +1827,17 @@ export default function App() {
                         Cópia de Segurança (Backup)
                       </h4>
                       <p className="text-[10px] text-slate-400 font-medium leading-relaxed mb-4">
-                        Salve o estado completo do banco de dados (palpites, participantes e pontos) em um arquivo JSON local ou restaure a partir do backup mais recente.
+                        Salve o estado do sistema baixando um arquivo JSON ou envie um arquivo de backup do seu computador para restaurar o bolão.
                       </p>
+
+                      {/* Hidden File Input for uploading backup */}
+                      <input
+                        type="file"
+                        id="backup-file-upload"
+                        accept=".json"
+                        onChange={handleBackupUpload}
+                        className="hidden"
+                      />
 
                       <div className="grid grid-cols-2 gap-3">
                         <button
@@ -1760,21 +1847,35 @@ export default function App() {
                           className={`py-3 px-2 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 border transition ${
                             isBackingUp ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200 cursor-pointer shadow-md'
                           }`}
+                          title="Gera um backup no servidor e baixa o arquivo JSON no seu computador"
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${isBackingUp ? 'animate-spin' : ''}`} />
                           Criar Backup
                         </button>
 
                         <button
-                          onClick={triggerRestore}
+                          onClick={() => document.getElementById('backup-file-upload')?.click()}
                           disabled={isBackingUp || isRestoring}
                           type="button"
                           className={`py-3 px-2 rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 border transition ${
                             isRestoring ? 'bg-slate-900 border-slate-800 text-slate-500 cursor-not-allowed' : 'bg-slate-900 hover:bg-slate-850 border-slate-800 text-slate-200 cursor-pointer shadow-md'
                           }`}
+                          title="Escolhe um arquivo JSON do seu computador para restaurar"
                         >
-                          <RotateCcw className={`w-3.5 h-3.5 ${isRestoring ? 'animate-spin' : ''}`} />
-                          Restaurar
+                          <Plus className="w-3.5 h-3.5 animate-pulse" />
+                          Subir Backup
+                        </button>
+                      </div>
+
+                      <div className="mt-3 text-center">
+                        <button
+                          onClick={triggerRestore}
+                          disabled={isBackingUp || isRestoring}
+                          type="button"
+                          className="text-[9px] font-bold text-slate-500 hover:text-slate-300 underline uppercase tracking-wider transition cursor-pointer"
+                          title="Restaura os dados a partir da cópia mais recente salva no servidor (backup_latest.json)"
+                        >
+                          Restaurar cópia rápida do servidor
                         </button>
                       </div>
 
