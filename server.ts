@@ -152,18 +152,38 @@ function findMatchingMatch(parsed: Match, existingList: Match[]): Match | undefi
 
 function mergeSyncedMatches(parsedMatches: Match[]): Match[] {
   const updatedMatches = state.matches.map(m => ({ ...m }));
+  const now = Date.now();
+
+  // 1. STRICT GUARD: If a match has not started yet relative to our local clock,
+  // we must ensure it is marked as scheduled with null scores, regardless of external state.
+  for (const m of updatedMatches) {
+    const matchStartTime = new Date(m.dateTime).getTime();
+    if (now < matchStartTime) {
+      m.status = 'scheduled';
+      m.homeScore = null;
+      m.awayScore = null;
+    }
+  }
+
+  // 2. Merge parsed matches from Gemini only if they have already started or finished
   for (const pm of parsedMatches) {
     const existing = findMatchingMatch(pm, updatedMatches);
     if (existing) {
+      const matchStartTime = new Date(existing.dateTime).getTime();
+      if (now >= matchStartTime) {
+        const emHome = normalizeTeamName(existing.homeTeam);
+        const pmHome = normalizeTeamName(pm.homeTeam);
+        const isInverted = emHome !== pmHome;
+
+        existing.homeScore = pm.homeScore !== undefined && pm.homeScore !== null ? (isInverted ? pm.awayScore : pm.homeScore) : existing.homeScore;
+        existing.awayScore = pm.awayScore !== undefined && pm.awayScore !== null ? (isInverted ? pm.homeScore : pm.awayScore) : existing.awayScore;
+        existing.status = pm.status || existing.status;
+      }
+      
+      // Update flag emojis if present
       const emHome = normalizeTeamName(existing.homeTeam);
       const pmHome = normalizeTeamName(pm.homeTeam);
       const isInverted = emHome !== pmHome;
-
-      // Update details but PRESERVE the existing ID and canonical dateTime!
-      existing.homeScore = pm.homeScore !== undefined && pm.homeScore !== null ? (isInverted ? pm.awayScore : pm.homeScore) : existing.homeScore;
-      existing.awayScore = pm.awayScore !== undefined && pm.awayScore !== null ? (isInverted ? pm.homeScore : pm.awayScore) : existing.awayScore;
-      existing.status = pm.status || existing.status;
-      
       if (pm.homeFlag && pm.awayFlag) {
         if (isInverted) {
           existing.homeFlag = pm.awayFlag;
