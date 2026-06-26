@@ -102,6 +102,124 @@ function getCleanState(rawState: AppState): AppState {
   };
 }
 
+let lastAutoSyncTime = 0;
+const AUTO_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour in ms
+let isAutoSyncRunning = false;
+
+async function performAutoSyncMatches(): Promise<boolean> {
+  const now = Date.now();
+  if (isAutoSyncRunning) {
+    return false;
+  }
+  if (now - lastAutoSyncTime < AUTO_SYNC_INTERVAL && lastAutoSyncTime !== 0) {
+    return false;
+  }
+
+  isAutoSyncRunning = true;
+  console.log("[Auto-Sync] Iniciando sincronização automática dos jogos e resultados com a FIFA...");
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === "Sua_Chave_Gemini_Aqui" || apiKey.trim() === "") {
+    console.warn("[Auto-Sync] GEMINI_API_KEY não configurada. Ignorando sincronização automática.");
+    isAutoSyncRunning = false;
+    return false;
+  }
+
+  try {
+    const loaded = await loadAppState();
+    if (!loaded) {
+      isAutoSyncRunning = false;
+      return false;
+    }
+    state = loaded;
+
+    const ai = new GoogleGenAI({ apiKey });
+    const todayStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    let responseText = "";
+
+    try {
+      console.log("[Auto-Sync] Buscando partidas reais da Copa 2026 via Gemini com Search Grounding...");
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Today's date is ${todayStr}. Search for real-world 2026 FIFA World Cup matches, scores, and fixtures.
+        Use Google Search to find matches that have been played since the start of the tournament (June 11, 2026) up to today, and scheduled matches for the next few days.
+        Return the list of matches as a JSON array of objects fitting this structure:
+        {
+          "id": string, // format like "m_real_1", "m_real_2", etc.
+          "homeTeam": string, // Name in Portuguese (e.g. Brasil, Alemanha, etc.)
+          "awayTeam": string, // Name in Portuguese
+          "homeFlag": string, // Emoji flag
+          "awayFlag": string, // Emoji flag
+          "homeScore": number | null,
+          "awayScore": number | null,
+          "status": "scheduled" | "live" | "finished",
+          "dateTime": string
+        }
+        Include at least 15-20 matches showing the progression of the tournament starting from June 20, 2026 up to today and upcoming matches in the next few days. Team names must be in Portuguese.
+        Respond ONLY with the JSON array inside a \`\`\`json \`\`\` block.`,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
+      });
+      responseText = response.text || "";
+    } catch (searchError) {
+      console.warn("[Auto-Sync] Gemini Search Grounding falhou. Tentando sem a ferramenta de busca...", searchError);
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: `Today's date is ${todayStr}. Return the list of 2026 FIFA World Cup matches, scores, and fixtures based on your knowledge.
+        Provide the matches played since June 20, 2026 to June 25, 2026, and their scores.
+        Return the list of matches as a JSON array of objects fitting this structure:
+        {
+          "id": string,
+          "homeTeam": string,
+          "awayTeam": string,
+          "homeFlag": string,
+          "awayFlag": string,
+          "homeScore": number | null,
+          "awayScore": number | null,
+          "status": "scheduled" | "live" | "finished",
+          "dateTime": string
+        }
+        Respond ONLY with the JSON array inside a \`\`\`json \`\`\` block.`
+      });
+      responseText = response.text || "";
+    }
+
+    if (!responseText) throw new Error("Resposta vazia da API do Gemini.");
+
+    let text = responseText;
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/```\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+      text = jsonMatch[1];
+    }
+    const parsedMatches: Match[] = JSON.parse(text.trim());
+
+    if (!parsedMatches || !Array.isArray(parsedMatches) || parsedMatches.length === 0) {
+      throw new Error("Resposta do Gemini não é um array válido.");
+    }
+
+    for (const m of parsedMatches) {
+      if (!m.id || !m.homeTeam || !m.awayTeam || !m.dateTime || !m.status) {
+        throw new Error("Objetos de partida retornados do Gemini possuem campos ausentes.");
+      }
+    }
+
+    state.matches = parsedMatches;
+    state.guesses = (state.guesses || []).filter(g => state.matches.some(sm => sm.id === g.matchId));
+    recalculateLeaderboard();
+    await saveAppState(state);
+
+    lastAutoSyncTime = now;
+    lastDbLoadTime = now;
+    console.log(`[Auto-Sync] Sucesso: ${state.matches.length} partidas sincronizadas e pontos recalculados.`);
+    isAutoSyncRunning = false;
+    return true;
+  } catch (error) {
+    console.error("[Auto-Sync] Erro durante a atualização automática:", error);
+    isAutoSyncRunning = false;
+    return false;
+  }
+}
+
 let lastDbLoadTime = 0;
 const DB_CACHE_TTL = 5 * 1000; // 5 seconds in ms
 
@@ -214,6 +332,9 @@ export async function createApp() {
 
   // API ROOTS
   app.get("/api/status", async (req, res) => {
+    // Trigger background auto-sync if due (non-blocking)
+    performAutoSyncMatches().catch(err => console.error("[Auto-Sync] Erro no background job:", err));
+
     const latestState = await getLatestState();
     res.json(getCleanState(latestState));
   });
@@ -859,6 +980,12 @@ if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
     const PORT = process.env.PORT || 3000;
     app.listen(Number(PORT), "0.0.0.0", () => {
       console.log(`Server running on http://localhost:${PORT}`);
+
+      // Start background auto-sync timer (every 10 minutes checks if 1 hour has elapsed)
+      console.log("[Auto-Sync] Inicializando temporizador periódico para atualização automática dos jogos...");
+      setInterval(() => {
+        performAutoSyncMatches().catch(err => console.error("[Auto-Sync] Erro no timer periódico:", err));
+      }, 10 * 60 * 1000); // 10 minutes
     });
   }).catch(err => {
     console.error("Failed to start backend server: ", err);
