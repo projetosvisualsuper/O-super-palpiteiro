@@ -196,21 +196,21 @@ export default function App() {
     
     switch (matchTab) {
       case 'results':
-        // Show ALL finished matches, sorted by most recent first
+        // Show matches of yesterday (ontem) in BRT
         return allMatches
-          .filter(m => m.status === 'finished')
-          .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+          .filter(m => getBRTDateString(m.dateTime) === yesterdayStr)
+          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
       
       case 'upcoming':
-        // Show ALL matches of the current day (today) in BRT
+        // Show matches of today (hoje) in BRT
         return allMatches
           .filter(m => getBRTDateString(m.dateTime) === todayStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       case 'brazil':
-        // Show ALL scheduled/live matches from tomorrow onwards (BRT)
+        // Show matches of tomorrow (amanhã) in BRT
         return allMatches
-          .filter(m => getBRTDateString(m.dateTime) > todayStr && m.status !== 'finished')
+          .filter(m => getBRTDateString(m.dateTime) === tomorrowStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       default:
@@ -1326,10 +1326,10 @@ export default function App() {
                   <h4 className="text-xs text-slate-350 uppercase tracking-wider">Sem Partidas Encontradas</h4>
                   <p className="text-[10px] text-slate-500 leading-normal mt-1 max-w-[200px]">
                     {matchTab === 'results' 
-                      ? 'Nenhuma partida finalizada encontrada.'
+                      ? 'Nenhuma partida agendada ou realizada no dia de ontem.'
                       : matchTab === 'upcoming'
-                      ? 'Nenhuma partida agendada para o dia de hoje.'
-                      : 'Nenhuma partida agendada para os próximos dias.'}
+                      ? 'Nenhuma partida agendada ou realizada no dia de hoje.'
+                      : 'Nenhuma partida agendada para o dia de amanhã.'}
                   </p>
                 </div>
               ) : (
