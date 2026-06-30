@@ -38,11 +38,18 @@ let state: AppState = {
 // Help helper to update points for all players based on ended matches
 function recalculateLeaderboard() {
   // Clear counts and recalculate
-  const playerStats: Record<string, { points: number; exact: number; winner: number }> = {};
+  const playerStats: Record<string, { 
+    points: number; 
+    exact: number; 
+    winner: number; 
+    winnerAndDiff: number; 
+    winnerOnly: number; 
+    oneTeamScore: number; 
+  }> = {};
 
   // Initialize with all existing participants
   state.participants.forEach(p => {
-    playerStats[p.name.toLowerCase()] = { points: 0, exact: 0, winner: 0 };
+    playerStats[p.name.toLowerCase()] = { points: 0, exact: 0, winner: 0, winnerAndDiff: 0, winnerOnly: 0, oneTeamScore: 0 };
   });
 
   // Calculate points for finished matches
@@ -61,26 +68,35 @@ function recalculateLeaderboard() {
 
       const pKey = guess.participantName.toLowerCase();
       if (!playerStats[pKey]) {
-        playerStats[pKey] = { points: 0, exact: 0, winner: 0 };
+        playerStats[pKey] = { points: 0, exact: 0, winner: 0, winnerAndDiff: 0, winnerOnly: 0, oneTeamScore: 0 };
       }
 
       playerStats[pKey].points += calculation.points;
       if (calculation.category === 'exact') {
         playerStats[pKey].exact += 1;
-      } else if (calculation.category === 'diff' || calculation.category === 'winner') {
+      } else if (calculation.category === 'diff') {
+        playerStats[pKey].winnerAndDiff += 1;
         playerStats[pKey].winner += 1;
+      } else if (calculation.category === 'winner') {
+        playerStats[pKey].winnerOnly += 1;
+        playerStats[pKey].winner += 1;
+      } else if (calculation.category === 'one_team') {
+        playerStats[pKey].oneTeamScore += 1;
       }
     }
   });
 
   // Apply properties to participants
   state.participants = state.participants.map(p => {
-    const stats = playerStats[p.name.toLowerCase()] || { points: 0, exact: 0, winner: 0 };
+    const stats = playerStats[p.name.toLowerCase()] || { points: 0, exact: 0, winner: 0, winnerAndDiff: 0, winnerOnly: 0, oneTeamScore: 0 };
     return {
       ...p,
       points: stats.points,
       exactScores: stats.exact,
-      correctWinners: stats.winner
+      correctWinners: stats.winner,
+      winnerAndDiff: stats.winnerAndDiff,
+      winnerOnly: stats.winnerOnly,
+      oneTeamScore: stats.oneTeamScore
     };
   });
 
@@ -360,6 +376,7 @@ async function getLatestState(forceRefresh = false): Promise<AppState> {
           await saveAppState(state);
         } else {
           state = loaded;
+          recalculateLeaderboard();
         }
         lastDbLoadTime = now;
       }
@@ -414,6 +431,7 @@ export async function createApp() {
         await saveAppState(state);
       } else {
         state = loadedState;
+        recalculateLeaderboard();
       }
        console.log("[Server] State loaded from Firestore database successfully.");
        lastDbLoadTime = Date.now();
@@ -477,6 +495,9 @@ export async function createApp() {
         points: 0,
         exactScores: 0,
         correctWinners: 0,
+        winnerAndDiff: 0,
+        winnerOnly: 0,
+        oneTeamScore: 0,
         lastGuessTime: new Date().toISOString(),
         avatarColor: randomColor,
         pin: pin.trim()
@@ -570,6 +591,9 @@ export async function createApp() {
       points: 0,
       exactScores: 0,
       correctWinners: 0,
+      winnerAndDiff: 0,
+      winnerOnly: 0,
+      oneTeamScore: 0,
       lastGuessTime: new Date().toISOString(),
       avatarColor: randomColor,
       pin: trimmedPin

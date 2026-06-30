@@ -1058,9 +1058,34 @@ export default function App() {
                               {p.name}
                             </div>
                             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400 font-mono mt-0.5">
-                              <span>{p.exactScores} Placar Cheio ({appState?.rules?.exactScore ?? 10} pts)</span>
-                              <span className="text-slate-650">•</span>
-                              <span>{p.correctWinners} Vencedores ({appState?.rules?.winnerOnly ?? 5} pts)</span>
+                              {(() => {
+                                const details = [];
+                                if (p.exactScores > 0) {
+                                  details.push(`${p.exactScores} Placar Cheio (${appState?.rules?.exactScore ?? 10} pts)`);
+                                }
+                                if (p.winnerAndDiff !== undefined || p.winnerOnly !== undefined) {
+                                  if (p.winnerAndDiff && p.winnerAndDiff > 0) {
+                                    details.push(`${p.winnerAndDiff} Vencedor + Saldo (${appState?.rules?.winnerAndDiff ?? 7} pts)`);
+                                  }
+                                  if (p.winnerOnly && p.winnerOnly > 0) {
+                                    details.push(`${p.winnerOnly} Vencedor apenas (${appState?.rules?.winnerOnly ?? 5} pts)`);
+                                  }
+                                } else if (p.correctWinners > 0) {
+                                  details.push(`${p.correctWinners} Vencedores (${appState?.rules?.winnerOnly ?? 5} pts)`);
+                                }
+                                if (p.oneTeamScore && p.oneTeamScore > 0) {
+                                  details.push(`${p.oneTeamScore} Gol de 1 time (${appState?.rules?.oneTeamScore ?? 2} pts)`);
+                                }
+                                if (details.length === 0) {
+                                  return <span>Nenhum acerto</span>;
+                                }
+                                return details.map((detail, idx) => (
+                                  <span key={idx} className="flex items-center">
+                                    {idx > 0 && <span className="text-slate-650 mr-1.5">•</span>}
+                                    {detail}
+                                  </span>
+                                ));
+                              })()}
                             </div>
                           </div>
                         </div>

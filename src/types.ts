@@ -16,6 +16,9 @@ export interface Participant {
   points: number;
   exactScores: number; // exact placar: 10 pts
   correctWinners: number; // correct winner: 5 pts / 7 pts
+  winnerAndDiff?: number; // 7 pts
+  winnerOnly?: number; // 5 pts
+  oneTeamScore?: number; // 2 pts
   lastGuessTime: string;
   avatarColor: string;
   pin?: string;
