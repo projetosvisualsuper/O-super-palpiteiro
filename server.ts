@@ -31,7 +31,8 @@ let state: AppState = {
   participateTitle: "LEIA O QR CODE COM O CELULAR",
   participateInstruction: "Aponte a câmera pro QR Code, insira seu nome, escolha sua cor e arrisque seus palpites. Salve para pontuar na TV na hora!",
   tvLiveLabel: "TV LIVE",
-  championshipName: "COPA DO MUNDO DE 2026"
+  championshipName: "COPA DO MUNDO DE 2026",
+  show18Banner: false
 };
 
 // Help helper to update points for all players based on ended matches
@@ -786,6 +787,7 @@ export async function createApp() {
       participateInstruction,
       tvLiveLabel,
       championshipName,
+      show18Banner,
       rules
     } = req.body;
     
@@ -806,6 +808,7 @@ export async function createApp() {
     
     state.tvLiveLabel = tvLiveLabel !== undefined ? tvLiveLabel : state.tvLiveLabel;
     state.championshipName = championshipName !== undefined ? championshipName : state.championshipName;
+    state.show18Banner = show18Banner !== undefined ? !!show18Banner : state.show18Banner;
     
     if (rules && typeof rules === 'object') {
       state.rules = {
@@ -981,7 +984,8 @@ export async function createApp() {
       participateTitle: "LEIA O QR CODE COM O CELULAR",
       participateInstruction: "Aponte a câmera pro QR Code, insira seu nome, escolha sua cor e arrisque seus palpites. Salve para pontuar na TV na hora!",
       tvLiveLabel: "TV LIVE",
-      championshipName: "COPA DO MUNDO DE 2026"
+      championshipName: "COPA DO MUNDO DE 2026",
+      show18Banner: false
     };
     recalculateLeaderboard();
     try {

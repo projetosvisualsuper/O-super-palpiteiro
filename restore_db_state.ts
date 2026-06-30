@@ -56,7 +56,8 @@ async function restore() {
     participateTitle: (current && current.participateTitle) || "LEIA O QR CODE COM O CELULAR",
     participateInstruction: (current && current.participateInstruction) || "Aponte a câmera pro QR Code, insira seu nome, escolha sua cor e arrisque seus palpites. Salve para pontuar na TV na hora!",
     tvLiveLabel: (current && current.tvLiveLabel) || "TV LIVE",
-    championshipName: (current && current.championshipName) || "COPA DO MUNDO DE 2026"
+    championshipName: (current && current.championshipName) || "COPA DO MUNDO DE 2026",
+    show18Banner: (current && current.show18Banner) !== undefined ? current.show18Banner : false
   };
 
   console.log(`Restoring DB with:`);

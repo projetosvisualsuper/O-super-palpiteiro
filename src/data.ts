@@ -289,6 +289,72 @@ export const INITIAL_MATCHES: Match[] = [
     awayScore: null,
     status: 'scheduled',
     dateTime: '2026-06-27T00:00:00Z', // June 26 21:00 BRT
+  },
+  {
+    id: 'm_real_32',
+    homeTeam: 'Egito',
+    awayTeam: 'Irã',
+    homeFlag: '🇪🇬',
+    awayFlag: '🇮🇷',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-27T03:00:00Z', // June 27 00:00 BRT
+  },
+  {
+    id: 'm_real_33',
+    homeTeam: 'Nova Zelândia',
+    awayTeam: 'Bélgica',
+    homeFlag: '🇳🇿',
+    awayFlag: '🇧🇪',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-27T03:00:00Z', // June 27 00:00 BRT
+  },
+  {
+    id: 'm_real_34',
+    homeTeam: 'Panamá',
+    awayTeam: 'Inglaterra',
+    homeFlag: '🇵🇦',
+    awayFlag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-27T21:00:00Z', // June 27 18:00 BRT
+  },
+  {
+    id: 'm_real_35',
+    homeTeam: 'Croácia',
+    awayTeam: 'Gana',
+    homeFlag: '🇭🇷',
+    awayFlag: '🇬🇭',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-27T21:00:00Z', // June 27 18:00 BRT
+  },
+  {
+    id: 'm_real_36',
+    homeTeam: 'Argélia',
+    awayTeam: 'Áustria',
+    homeFlag: '🇩🇿',
+    awayFlag: '🇦🇹',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-28T02:00:00Z', // June 27 23:00 BRT
+  },
+  {
+    id: 'm_real_37',
+    homeTeam: 'Jordânia',
+    awayTeam: 'Argentina',
+    homeFlag: '🇯🇴',
+    awayFlag: '🇦🇷',
+    homeScore: null,
+    awayScore: null,
+    status: 'scheduled',
+    dateTime: '2026-06-28T02:00:00Z', // June 27 23:00 BRT
   }
 ];
 

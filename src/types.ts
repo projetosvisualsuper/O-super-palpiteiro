@@ -60,4 +60,5 @@ export interface AppState {
   participateInstruction?: string;
   tvLiveLabel?: string;
   championshipName?: string;
+  show18Banner?: boolean;
 }

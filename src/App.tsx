@@ -196,21 +196,21 @@ export default function App() {
     
     switch (matchTab) {
       case 'results':
-        // Show ONLY matches of the previous day (yesterday) in BRT
+        // Show ALL finished matches, sorted by most recent first
         return allMatches
-          .filter(m => getBRTDateString(m.dateTime) === yesterdayStr)
-          .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
+          .filter(m => m.status === 'finished')
+          .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
       
       case 'upcoming':
-        // Show ONLY matches of the current day (today) in BRT
+        // Show ALL matches of the current day (today) in BRT
         return allMatches
           .filter(m => getBRTDateString(m.dateTime) === todayStr)
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       case 'brazil':
-        // Show ONLY matches of the following day (tomorrow) in BRT
+        // Show ALL scheduled/live matches from tomorrow onwards (BRT)
         return allMatches
-          .filter(m => getBRTDateString(m.dateTime) === tomorrowStr)
+          .filter(m => getBRTDateString(m.dateTime) > todayStr && m.status !== 'finished')
           .sort((a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime());
           
       default:
@@ -276,6 +276,7 @@ export default function App() {
   const [configPrize3Description, setConfigPrize3Description] = useState('');
   const [configTvLiveLabel, setConfigTvLiveLabel] = useState('');
   const [configChampionshipName, setConfigChampionshipName] = useState('');
+  const [configShow18Banner, setConfigShow18Banner] = useState(false);
   
   // New instructions & score customizability states
   const [configParticipateTitle, setConfigParticipateTitle] = useState('');
@@ -319,6 +320,7 @@ export default function App() {
       setConfigParticipateInstruction(appState.participateInstruction || 'Preencha seu nome, selecione seu time e envie seu palpite para pontuar. O ranking atualiza na TV na hora!');
       setConfigTvLiveLabel(appState.tvLiveLabel || 'TV LIVE');
       setConfigChampionshipName(appState.championshipName || 'COPA DO MUNDO DE 2026');
+      setConfigShow18Banner(appState.show18Banner || false);
       setRuleExactScore(appState.rules?.exactScore ?? 10);
       setRuleWinnerAndDiff(appState.rules?.winnerAndDiff ?? 7);
       setRuleWinnerOnly(appState.rules?.winnerOnly ?? 5);
@@ -781,6 +783,7 @@ export default function App() {
           participateInstruction: configParticipateInstruction,
           tvLiveLabel: configTvLiveLabel,
           championshipName: configChampionshipName,
+          show18Banner: configShow18Banner,
           rules: {
             exactScore: ruleExactScore,
             winnerAndDiff: ruleWinnerAndDiff,
@@ -1323,10 +1326,10 @@ export default function App() {
                   <h4 className="text-xs text-slate-350 uppercase tracking-wider">Sem Partidas Encontradas</h4>
                   <p className="text-[10px] text-slate-500 leading-normal mt-1 max-w-[200px]">
                     {matchTab === 'results' 
-                      ? 'Nenhuma partida realizada no dia de ontem.'
+                      ? 'Nenhuma partida finalizada encontrada.'
                       : matchTab === 'upcoming'
                       ? 'Nenhuma partida agendada para o dia de hoje.'
-                      : 'Nenhuma partida agendada para o dia de amanhã.'}
+                      : 'Nenhuma partida agendada para os próximos dias.'}
                   </p>
                 </div>
               ) : (
@@ -1410,29 +1413,45 @@ export default function App() {
               }))}
             </div>
 
-            {/* Quick TV controller trigger block */}
-            <div className="mt-2.5 p-2 bg-emerald-950/20 border border-emerald-500/10 rounded-lg flex items-center justify-between gap-1.5 px-3 py-2.5">
-              <div className="flex-1">
-                <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
-                  ESTÁ TESTANDO O FLUXO?
-                </h4>
-                <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">
-                  Temos um simulador de resultados no painel de controle para liquidar as partidas instantaneamente!
-                </p>
+            {appState?.show18Banner ? (
+              <div className="mt-2.5 p-2 bg-red-950/20 border border-red-500/20 rounded-lg flex items-center gap-3 px-3 py-2.5">
+                <div className="bg-red-600 text-white font-mono font-extrabold text-[10px] w-6 h-6 rounded-full flex items-center justify-center shrink-0 select-none shadow-[0_0_8px_rgba(239,68,68,0.5)]">
+                  +18
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-[10px] font-black text-red-500 uppercase tracking-widest leading-none">
+                    PROIBIDO PARA MENORES DE 18 ANOS
+                  </h4>
+                  <p className="text-[9px] text-slate-400 mt-1 leading-tight">
+                    Os palpites e apostas deste evento são destinados apenas para maiores de 18 anos. Jogue com responsabilidade.
+                  </p>
+                </div>
               </div>
-              <button 
-                onClick={() => {
-                  if (isAdmin) {
-                    setAdminOpen(true);
-                  } else {
-                    setPasswordModalOpen(true);
-                  }
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-[9px] px-2 py-1 rounded uppercase cursor-pointer shrink-0"
-              >
-                ABRIR
-              </button>
-            </div>
+            ) : (
+              /* Quick TV controller trigger block */
+              <div className="mt-2.5 p-2 bg-emerald-950/20 border border-emerald-500/10 rounded-lg flex items-center justify-between gap-1.5 px-3 py-2.5">
+                <div className="flex-1">
+                  <h4 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
+                    ESTÁ TESTANDO O FLUXO?
+                  </h4>
+                  <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">
+                    Temos um simulador de resultados no painel de controle para liquidar as partidas instantaneamente!
+                  </p>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (isAdmin) {
+                      setAdminOpen(true);
+                    } else {
+                      setPasswordModalOpen(true);
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-[9px] px-2 py-1 rounded uppercase cursor-pointer shrink-0"
+                >
+                  ABRIR
+                </button>
+              </div>
+            )}
           </div>
         </main>
 
@@ -2060,6 +2079,20 @@ export default function App() {
                               placeholder="ex: COPA DO MUNDO DE 2026"
                               className="w-full bg-slate-900 text-slate-100 p-3 rounded-xl border border-slate-800 text-sm focus:outline-none focus:border-yellow-500 font-semibold"
                             />
+                          </div>
+
+                          {/* Banner de restrição de idade (+18) */}
+                          <div className="flex items-center gap-2.5 mt-2 bg-slate-900/60 p-3 rounded-xl border border-slate-800/80">
+                            <input
+                              id="show18BannerCheck"
+                              type="checkbox"
+                              checked={configShow18Banner}
+                              onChange={(e) => setConfigShow18Banner(e.target.checked)}
+                              className="w-4 h-4 rounded text-yellow-500 focus:ring-yellow-500 bg-slate-950 border-slate-800 cursor-pointer"
+                            />
+                            <label htmlFor="show18BannerCheck" className="text-[11px] font-bold text-slate-300 uppercase select-none cursor-pointer">
+                              Exibir banner proibido menores (+18)
+                            </label>
                           </div>
 
                           <div className="border-t border-slate-900/60 my-2 pt-2" />
