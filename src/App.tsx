@@ -1103,27 +1103,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Rules explanation card footer */}
-            <div className="mt-2.5 pt-2 border-t border-slate-800/60 bg-slate-950/40 -mx-4 -mb-4 px-4 py-2.5">
-              <h3 className="text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest flex items-center gap-1">
-                <HelpCircle className="w-3.5 h-3.5 text-emerald-400" />
-                COMO PONTUAR (REGULAMENTO ADAPTADO)
-              </h3>
-              <div className="grid grid-cols-2 gap-1.5 text-[9px] text-slate-400 font-mono">
-                <div className="bg-slate-900/50 p-1 rounded border border-slate-800/80">
-                  <span className="text-emerald-400 font-bold">{appState?.rules?.exactScore ?? 10} pts:</span> Placar Cheio
-                </div>
-                <div className="bg-slate-900/50 p-1 rounded border border-slate-800/80">
-                  <span className="text-yellow-400 font-bold">{appState?.rules?.winnerAndDiff ?? 7} pts:</span> Vencedor + Saldo
-                </div>
-                <div className="bg-slate-900/50 p-1 rounded border border-slate-800/80">
-                  <span className="text-emerald-300 font-bold">{appState?.rules?.winnerOnly ?? 5} pts:</span> Vencedor apenas
-                </div>
-                <div className="bg-slate-900/50 p-1 rounded border border-slate-800/80">
-                  <span className="text-slate-400 font-bold">{appState?.rules?.oneTeamScore ?? 2} pts:</span> Gol de 1 time
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* COLUMN 2: THE GRAND QR CODE CENTERPIECE (4 cols) */}
